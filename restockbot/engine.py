@@ -30,6 +30,17 @@ def retailer_name(r: str, l: Optional[Listing] = None) -> str:
     return RETAILER_NAMES.get(r) or (l.seller if l and l.seller else r.title())
 
 
+def cart_url(l: Listing) -> str:
+    """Direct add-to-cart links, one tap faster than the product page during a drop."""
+    if l.retailer == "walmart" and l.sku.isdigit():
+        return f"https://affil.walmart.com/cart/addToCart?items={l.sku}"
+    if l.retailer == "bestbuy" and l.sku.isdigit():
+        return f"https://api.bestbuy.com/click/-/{l.sku}/cart"
+    if l.retailer.startswith("shop:") and l.url:
+        return l.url  # Shopify product page has the add button at the top
+    return ""
+
+
 def money(v: Optional[float]) -> str:
     return f"${v:,.2f}" if v is not None else "?"
 
@@ -170,6 +181,9 @@ class Engine:
 
         value_line, bump = self._value_line(m, l.price)
         actions = [view_action("🛒 Buy now", l.url)]
+        cart = cart_url(l)
+        if cart:
+            actions.insert(0, view_action("⚡ Add to cart", cart))
         hot_desc = None
 
         # --- online availability ---

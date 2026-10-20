@@ -225,3 +225,10 @@ def test_drop_mode_speeds_up_checks(env):
     eng.watchlist["releases"] = [{"game": "pokemon", "date": date.today().isoformat(), "name": "Big set"}]
     assert eng.is_hot(datetime.combine(date.today(), datetime.min.time()).replace(hour=8))
     assert not eng.is_hot(datetime.combine(date.today(), datetime.min.time()).replace(hour=15))
+
+
+def test_add_to_cart_buttons():
+    from restockbot.engine import cart_url
+    w = Listing(retailer="walmart", sku="13579", title="x", url="u")
+    assert cart_url(w) == "https://affil.walmart.com/cart/addToCart?items=13579"
+    assert cart_url(Listing(retailer="target", sku="1", title="x", url="u")) == ""

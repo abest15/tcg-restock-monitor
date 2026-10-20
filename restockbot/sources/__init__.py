@@ -29,6 +29,14 @@ REGISTRY = {
 }
 
 
+def is_enabled(name: str, scfg: dict, watchlist: dict) -> bool:
+    if name == "shopify" and watchlist.get("shops"):
+        return True
+    if name == "kroger":  # needs free API keys; stays off (and quiet) until they're added
+        return bool(scfg.get("enabled") and scfg.get("client_id") and scfg.get("client_secret"))
+    return bool(scfg.get("enabled"))
+
+
 def build_sources(cfg: dict, watchlist: dict, http: Http, ctx: Context, only: list[str] | None = None) -> list[Source]:
     out: list[Source] = []
     for name, cls in REGISTRY.items():
@@ -36,7 +44,7 @@ def build_sources(cfg: dict, watchlist: dict, http: Http, ctx: Context, only: li
         if only is not None:
             if name not in only:
                 continue
-        elif not scfg.get("enabled") and not (name == "shopify" and watchlist.get("shops")):
+        elif not is_enabled(name, scfg, watchlist):
             continue
         if cls is SetsSource:
             out.append(cls(scfg, http, ctx, tracker=ctx.tracker))

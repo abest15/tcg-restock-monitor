@@ -150,8 +150,9 @@ def cmd_doctor() -> None:
     cfg, wl, db, engine = build(dry_run=True, only=list(REGISTRY))
     print(f"ZIP {cfg['location']['zip'] or '(not set! run setup)'}, radius {cfg['location']['radius_miles']} mi, "
           f"games: {', '.join(cfg['games'])}\n")
+    from .sources import is_enabled
     for s in engine.sources:
-        enabled = cfg["sources"].get(s.name, {}).get("enabled")
+        enabled = is_enabled(s.name, cfg["sources"].get(s.name, {}), wl)
         t0 = time.time()
         try:
             msg = s.doctor()
