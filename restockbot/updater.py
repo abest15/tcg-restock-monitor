@@ -25,7 +25,7 @@ from .config import DATA_DIR, ROOT
 
 log = logging.getLogger(__name__)
 
-PROTECTED = {"config.yaml", "data", "portfolio.yaml", "target_items.txt", ".venv", ".git"}
+PROTECTED = {"config.yaml", "keys.yaml", "data", "portfolio.yaml", "target_items.txt", ".venv", ".git"}
 USER_EDITABLE = {"watchlist.yaml"}
 RESTART_EXIT_CODE = 3
 

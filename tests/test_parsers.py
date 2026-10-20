@@ -264,3 +264,76 @@ def test_samsclub_walmart_style_page():
     page = f'<script id="__NEXT_DATA__" type="application/json">{json.dumps(nd)}</script>'
     l = sitesearch.parse_page(page, "https://www.samsclub.com/s/pokemon%20cards", "samsclub", "Sam's Club")[0]
     assert l.url == "https://www.samsclub.com/ip/pokemon-bundle-2pk/13579" and l.status == IN_STOCK
+
+
+def test_reddit_vending_reports(tmp_path):
+    from restockbot.db import DB
+    from restockbot.sources.base import Context
+    from restockbot.config import DEFAULTS, deep_merge
+    cfg = deep_merge(DEFAULTS, {"sources": {"reddit": {"local_terms": ["Thornton"]}}})
+    db = DB(tmp_path / "v.db")
+    ctx = Context(cfg, load_watchlist(), matcher(), db)
+
+    class Http:
+        def __init__(self, xml):
+            self.xml = xml
+
+        def get(self, *a, **k):
+            return type("R", (), {"text": self.xml})()
+
+    def feed(*entries):
+        body = "".join(f'<entry><id>{i}</id><title>{t}</title><link href="https://r/{i}"/><content>x</content></entry>'
+                       for i, t in entries)
+        return f'<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">{body}</feed>'
+    src = reddit.RedditSource(cfg["sources"]["reddit"], Http(feed(("a", "old post"))), ctx)
+    src.check()  # first fetch: quiet
+    src.http = Http(feed(("b", "Pokemon vending machine at King Soopers Thornton just restocked!"),
+                         ("c", "Vending machine in Ohio restocked with pokemon packs")))
+    sig = {s.key: s for s in src.check().signals}
+    assert sig["reddit:b"].title.startswith("🎰📍 Local vending") and sig["reddit:b"].priority == 4
+    assert sig["reddit:c"].priority == 2
+    ev = db.q("SELECT store_name FROM events WHERE kind='vending_report'")
+    assert ev[0]["store_name"] == "King Soopers Thornton"
+
+
+def test_kroger_parsers_and_check(tmp_path):
+    from restockbot.sources import kroger
+    from restockbot.db import DB
+    from restockbot.sources.base import Context
+    from restockbot.config import DEFAULTS, deep_merge
+    locs = {"data": [
+        {"locationId": "62000123", "chain": "KING_SOOPERS", "name": "Thornton Marketplace",
+         "address": {"addressLine1": "1 Main", "city": "Thornton", "state": "CO"},
+         "geolocation": {"latitude": 39.90, "longitude": -104.97}},
+        {"locationId": "62000999", "chain": "KING_SOOPERS", "name": "Far Store",
+         "address": {"addressLine1": "9 Rd", "city": "Pueblo", "state": "CO"},
+         "geolocation": {"latitude": 38.25, "longitude": -104.6}}]}
+    stores = kroger.parse_locations(locs, (39.93, -104.88))
+    assert stores[0]["name"] == "King Soopers Thornton Marketplace" and stores[0]["distance"] < 10
+    assert stores[1]["distance"] > 100
+    prods = {"data": [{"productId": "0082054300", "description": "Pokemon Trading Card Game Booster Bundle",
+                       "aisleLocations": [{"description": "Toys"}],
+                       "items": [{"price": {"regular": 26.99, "promo": 0}, "inventory": {"stockLevel": "LOW"},
+                                  "fulfillment": {"inStore": True}}]}]}
+    p = kroger.parse_products(prods)[0]
+    assert p["status"] == LIMITED and p["price"] == 26.99 and p["aisle"] == "Toys"
+
+    cfg = deep_merge(DEFAULTS, {"location": {"zip": "80022"},
+                                "sources": {"kroger": {"client_id": "a", "client_secret": "b", "terms": ["pokemon cards"]}}})
+    db = DB(tmp_path / "k.db")
+    db.set("geo:80022", {"lat": "39.93", "lon": "-104.88"})
+    ctx = Context(cfg, load_watchlist(), matcher(), db)
+
+    class Http:
+        def post(self, *a, **k):
+            return type("R", (), {"status_code": 200, "json": lambda s: {"access_token": "t", "expires_in": 1800}})()
+
+        def json(self, url, **k):
+            return locs if "locations" in url else prods
+
+    src = kroger.KrogerSource(cfg["sources"]["kroger"], Http(), ctx)
+    src.scfg["max_stores"] = 1
+    res = src.check()
+    l = res.listings[0]
+    assert l.retailer == "kroger" and l.stores[0].status == LIMITED and "Toys" in l.stores[0].address
+    assert l.stores_checked and l.url.startswith("https://www.kingsoopers.com/")

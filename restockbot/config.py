@@ -22,7 +22,8 @@ DEFAULTS: dict[str, Any] = {
         "deal_filter": {"enabled": True, "compare": "both", "when_no_tcgplayer_price": "skip", "retail_only": False},
         "below_msrp_alerts": True,
         "new_listing_alerts": True,
-        "store_quantity_jump": 3,          # qty increase that counts as an in-store restock
+        "store_quantity_jump": 3,
+        "drop_mode": True,                 # check much faster around release mornings and active drops          # qty increase that counts as an in-store restock
         "quiet_hours": {"enabled": False, "start": "23:00", "end": "07:00", "min_priority": 5},
         "daily_digest_time": "08:00",
         "restock_forecast_time": "20:00",
@@ -33,14 +34,15 @@ DEFAULTS: dict[str, Any] = {
                    "search_interval_seconds": 1800, "max_stores": 20, "api_key": ""},
         "bestbuy": {"enabled": False, "interval_seconds": 180, "api_key": ""},
         "walmart": {"enabled": True, "interval_seconds": 300},
+        "kroger": {"enabled": True, "interval_seconds": 1200, "client_id": "", "client_secret": "", "max_stores": 8},
         "pokemoncenter": {"enabled": True, "interval_seconds": 120, "product_urls": []},
-        "shopify": {"enabled": False, "interval_seconds": 300, "stores": []},
+        "shopify": {"enabled": False, "interval_seconds": 180, "stores": []},
         "pagewatch": {"enabled": False, "interval_seconds": 300, "pages": []},
         "sitesearch": {"enabled": True, "interval_seconds": 900,
-                       "sites": ["costco", "samsclub", "dollargeneral", "fivebelow", "acehardware", "dollartree", "familydollar"]},
+                       "sites": ["costco", "samsclub", "gamestop", "barnesandnoble", "dollargeneral", "fivebelow", "acehardware", "dollartree", "familydollar"]},
         "reddit": {
             "enabled": True,
-            "interval_seconds": 300,
+            "interval_seconds": 240,
             "subreddits": ["PKMNTCGDeals", "OnePieceTCG"],
             "local_terms": [],
         },
@@ -69,8 +71,12 @@ def load_yaml(path: Path) -> dict:
         return yaml.safe_load(f) or {}
 
 
+KEYS_PATH = ROOT / "keys.yaml"
+
+
 def load_config(path: Path = CONFIG_PATH) -> dict:
-    cfg = deep_merge(DEFAULTS, load_yaml(path))
+    # keys.yaml (written by `python -m restockbot keys`) holds API keys outside config.yaml
+    cfg = deep_merge(deep_merge(DEFAULTS, load_yaml(path)), load_yaml(KEYS_PATH))
     # configs written by v1.0 used Target rates that trip its bot protection; move them to the gentler defaults
     t = cfg["sources"]["target"]
     if t.get("interval_seconds") == 120 and t.get("max_products_per_cycle") == 40:

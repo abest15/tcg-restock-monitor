@@ -9,6 +9,7 @@
   patterns     show learned in-store restock patterns per store
   calendar     show upcoming releases from the watchlist
   status       show what is buyable right now and recent restocks
+  keys         add free Best Buy / Kroger (King Soopers) API keys for more in-store stock
   update       install the latest version now (the bot also does this by itself)
 """
 from __future__ import annotations
@@ -115,6 +116,27 @@ def cmd_setup() -> None:
     print("\nNext: run `python -m restockbot doctor` to test the retailers, then `python -m restockbot run`.")
 
 
+def cmd_keys() -> None:
+    """Saves free API keys to keys.yaml (kept out of config.yaml, never touched by updates)."""
+    import yaml
+    from .config import KEYS_PATH, load_yaml
+    keys = load_yaml(KEYS_PATH)
+    src = keys.setdefault("sources", {})
+    print("Free API keys add more stores with in-store stock. Press Enter to keep the current value.\n")
+    print("Best Buy: https://developer.bestbuy.com  (sign up, copy the API key)")
+    bb = ask("Best Buy API key", src.get("bestbuy", {}).get("api_key", ""))
+    print("\nKroger / King Soopers: https://developer.kroger.com  (create an account, then Register an App;")
+    print("  environment: Production, scope: product.compact; copy the Client ID and Client Secret)")
+    kid = ask("Kroger Client ID", src.get("kroger", {}).get("client_id", ""))
+    ksec = ask("Kroger Client Secret", src.get("kroger", {}).get("client_secret", ""))
+    if bb:
+        src["bestbuy"] = {"enabled": True, "api_key": bb}
+    if kid and ksec:
+        src["kroger"] = {"enabled": True, "client_id": kid, "client_secret": ksec}
+    KEYS_PATH.write_text(yaml.safe_dump(keys, sort_keys=False), encoding="utf-8")
+    print(f"\nSaved to {KEYS_PATH}. Restart the bot (close and reopen start.bat) to use them.")
+
+
 def cmd_test_alert() -> None:
     cfg = load_config()
     n = Notifier(cfg)
@@ -192,6 +214,10 @@ def cmd_patterns() -> None:
     _, _, db, _ = build(dry_run=True, only=[])
     pats = store_patterns(db)
     print(describe_patterns(pats, 30))
+    from .reports import online_drop_patterns
+    online = online_drop_patterns(db)
+    if online:
+        print("\nOnline drop timing:\n" + "\n".join(online))
     tomorrow = date.fromordinal(date.today().toordinal() + 1)
     fc = forecast(db, tomorrow)
     if fc:
@@ -244,7 +270,7 @@ def main() -> None:
         if not CONFIG_PATH.exists():
             print("No config.yaml yet. Run:  python -m restockbot setup")
             sys.exit(1)
-    commands = {"setup": cmd_setup, "test-alert": cmd_test_alert, "doctor": cmd_doctor, "once": cmd_once,
+    commands = {"keys": cmd_keys, "setup": cmd_setup, "test-alert": cmd_test_alert, "doctor": cmd_doctor, "once": cmd_once,
                 "stores": cmd_stores, "patterns": cmd_patterns, "calendar": cmd_calendar, "status": cmd_status}
     if cmd == "run":
         _, _, _, engine = build(dry_run="--dry-run" in args)

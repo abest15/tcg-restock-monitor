@@ -45,8 +45,8 @@ def _bucket(hour: int) -> str:
 def store_patterns(db, days: int = 60) -> list[dict]:
     """For each store: how many separate restock days we've seen, which weekdays, which times."""
     since = time.time() - days * 86400
-    rows = db.q("SELECT ts, retailer, store_id, store_name, title FROM events WHERE kind='store_restock' AND ts>=?",
-                (since,))
+    rows = db.q("""SELECT ts, retailer, COALESCE(store_id, store_name) AS store_id, store_name, title FROM events
+                   WHERE kind IN ('store_restock', 'vending_report') AND ts>=?""", (since,))
     by_store: dict[tuple, list] = defaultdict(list)
     for r in rows:
         by_store[(r["retailer"], r["store_id"], r["store_name"])].append(r)
@@ -63,6 +63,33 @@ def store_patterns(db, days: int = 60) -> list[dict]:
                     "weekdays": weekdays, "times": times, "products": products,
                     "last": max(restock_days.values())})
     out.sort(key=lambda s: -s["restock_days"])
+    return out
+
+
+def online_drop_patterns(db, days: int = 60) -> list[str]:
+    """When each retailer tends to drop online: most common weekday and hour of detected restocks."""
+    rows = db.q("SELECT ts, retailer FROM events WHERE kind='online_restock' AND ts>=?", (time.time() - days * 86400,))
+    by: dict[str, list[datetime]] = defaultdict(list)
+    for r in rows:
+        by[r["retailer"]].append(datetime.fromtimestamp(r["ts"]))
+    out = []
+    for retailer, times in sorted(by.items(), key=lambda kv: -len(kv[1])):
+        if len(times) < 3:
+            continue
+        day, n_day = Counter(DAYS[t.weekday()] for t in times).most_common(1)[0]
+        hour, _ = Counter(t.hour for t in times).most_common(1)[0]
+        ampm = f"{hour % 12 or 12}{'am' if hour < 12 else 'pm'}"
+        name = retailer[5:] if retailer.startswith("shop:") else retailer.title()
+        out.append(f"• {name}: {len(times)} drops, most often {day[:3]} ({n_day}x), usually around {ampm}")
+    return out[:8]
+
+
+def health_lines(engine: "Engine") -> list[str]:
+    out = []
+    for s in engine.sources:
+        h = engine.db.get(f"health:{s.name}", {}) or {}
+        if h.get("fails"):
+            out.append(f"• {s.label}: failing ({h.get('error', 'blocked')[:60]})")
     return out
 
 
@@ -190,6 +217,12 @@ def scheduled(engine: "Engine", now: datetime) -> None:
 
     if now.strftime("%A").lower() == str(a["weekly_report_day"]).lower() and _once_per_day(db, "weekly", now, "18:00"):
         parts = ["In-store restock patterns (last 60 days):\n" + describe_patterns(store_patterns(db), 6)]
+        online = online_drop_patterns(db)
+        if online:
+            parts.append("Online drop timing:\n" + "\n".join(online))
+        bad = health_lines(engine)
+        if bad:
+            parts.append("Sources needing attention:\n" + "\n".join(bad))
         mk = watch_market_lines(engine)
         if mk:
             parts.append("Resale vs MSRP (TCGplayer):\n" + "\n".join(mk))

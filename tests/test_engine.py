@@ -200,3 +200,28 @@ def test_unknown_status_new_listing_alert(env):
     run(eng, src, listing(), Listing(retailer="acehardware", sku="a1", title="Pokemon Trading Card Game Booster Pack",
                                      url="https://acehardware.com/p", status="UNKNOWN", seller="Ace Hardware", trusted_price=True))
     assert "New listing at Ace Hardware" in n.sent[-1][0]
+
+
+def test_online_drop_patterns(env):
+    eng, src, n = env
+    base = datetime(2026, 9, 1, 21, 5)  # Tuesday 9pm
+    for w in range(4):
+        eng.db.add_event(kind="online_restock", retailer="walmart", key="k", title="ETB",
+                         ts=(base + timedelta(weeks=w)).timestamp())
+    lines = reports.online_drop_patterns(eng.db, days=3650)
+    assert lines == ["• Walmart: 4 drops, most often Tue (4x), usually around 9pm"]
+
+
+def test_drop_mode_speeds_up_checks(env):
+    eng, src, n = env
+    src.interval = 300
+    src.name = "walmart"
+    eng.watchlist["releases"] = []
+    assert eng.effective_interval(src) == 300
+    run(eng, src, listing())
+    run(eng, src, listing(IN_STOCK))          # watched (max priority) restock -> drop mode
+    assert eng.is_hot() and eng.effective_interval(src) == 120
+    eng.hot_until = 0
+    eng.watchlist["releases"] = [{"game": "pokemon", "date": date.today().isoformat(), "name": "Big set"}]
+    assert eng.is_hot(datetime.combine(date.today(), datetime.min.time()).replace(hour=8))
+    assert not eng.is_hot(datetime.combine(date.today(), datetime.min.time()).replace(hour=15))

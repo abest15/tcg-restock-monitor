@@ -18,7 +18,8 @@ from .sources.tcgplayer import latest_market
 log = logging.getLogger(__name__)
 
 RETAILER_NAMES = {"target": "Target", "bestbuy": "Best Buy", "walmart": "Walmart", "pokemoncenter": "Pokémon Center",
-                  "costco": "Costco", "samsclub": "Sam's Club", "dollargeneral": "Dollar General", "fivebelow": "Five Below",
+                  "costco": "Costco", "kroger": "King Soopers / Kroger", "gamestop": "GameStop",
+                  "barnesandnoble": "Barnes & Noble", "samsclub": "Sam's Club", "dollargeneral": "Dollar General", "fivebelow": "Five Below",
                   "acehardware": "Ace Hardware", "dollartree": "Dollar Tree", "familydollar": "Family Dollar"}
 GAME_TAG = {"pokemon": "pokeball", "onepiece": "pirate_flag"}
 
@@ -189,6 +190,8 @@ class Engine:
             elif not price_ok and not getattr(self, "gate", None):
                 log.info("ignored overpriced %s at %s (%s > MSRP %s)", l.title, name, money(l.price), money(m.msrp))
             if price_ok:
+                if m.priority >= 4 and not silent:
+                    self.heat(30, f"{l.title[:50]} restocked at {name}")
                 self.db.add_event(kind="online_restock", retailer=l.retailer, key=l.key, title=l.title,
                                   price=l.price, game=m.game, watch=m.watch_id)
                 hot_desc = f"• {label} @ {name} {money(l.price)}" if m.priority >= 4 else None
@@ -196,6 +199,8 @@ class Engine:
                 and (m.watch_id or m.priority >= 3) and not l.third_party \
                 and self._deal(l, m, price_ok)[0]:
             # new product page at a big retailer = an upcoming drop
+            if m.watch_id:
+                self.heat(20, f"new listing at {name}")
             self._send(f"newlisting:{l.key}", f"👀 New listing at {name}: {label}"[:200],
                        f"{l.title}\nStatus: {l.status.replace('_', ' ').title()} · {self._price_line(l, m)}"
                        + (f"\n{self._deal(l, m, price_ok)[1]}" if self._deal(l, m, price_ok)[1] else "")
@@ -286,11 +291,44 @@ class Engine:
         if s.quiet:
             self.db.mark_sent(f"signal:{s.key}")
             return
+        if s.source == "pokemoncenter" or (s.source == "reddit" and s.priority >= 4) or s.source == "sets":
+            self.heat(45, s.title[:60])
         cooldown = 86400 * 30 if s.source == "reddit" else 1800
         tags = s.tags + ([GAME_TAG[s.game]] if s.game in GAME_TAG else [])
         actions = [view_action("Open", s.url)] if s.url else None
         self._send(f"signal:{s.key}", s.title, s.message, priority=s.priority, tags=tags, url=s.url,
                    actions=actions, cooldown=cooldown)
+
+    # ---------------- drop mode ----------------
+    # Checking everything every few seconds gets the bot blocked (and then it sees nothing), so it checks
+    # fast only when a drop is likely: release-day mornings, right after a watched restock anywhere
+    # (drops hit several retailers at once), when the Pokémon Center queue goes up, or a new listing appears.
+    HOT_FACTOR = {"target": 0.4, "walmart": 0.4, "bestbuy": 0.5, "shopify": 0.4, "sitesearch": 0.5,
+                  "reddit": 0.5, "pokemoncenter": 0.5}
+    MIN_INTERVAL = 45.0
+
+    def heat(self, minutes: float, reason: str) -> None:
+        until = time.time() + minutes * 60
+        if until > getattr(self, "hot_until", 0):
+            if getattr(self, "hot_until", 0) < time.time():
+                log.warning("⚡ drop mode on for %.0f min: %s", minutes, reason)
+            self.hot_until = until
+            self.hot_reason = reason
+
+    def is_hot(self, now: Optional[datetime] = None) -> bool:
+        now = now or datetime.now()
+        if getattr(self, "hot_until", 0) > time.time():
+            return True
+        # release days: 12am-1pm, when online drops and store openings happen
+        if now.hour < 13 and reports.upcoming_releases(self.watchlist, self.cfg["games"], now.date(), days=0):
+            return True
+        return False
+
+    def effective_interval(self, s: Source) -> float:
+        base = s.interval
+        if self.cfg["alerts"].get("drop_mode", True) and self.is_hot():
+            return max(self.MIN_INTERVAL, base * self.HOT_FACTOR.get(s.name, 1.0))
+        return base
 
     # ---------------- scheduling ----------------
     def run_source_once(self, src: Source) -> None:
@@ -328,6 +366,7 @@ class Engine:
     def run_forever(self) -> bool:
         """Runs until stopped. Returns True when a self-update was installed and a restart is needed."""
         next_run = {s.name: time.time() + i * 5 for i, s in enumerate(self.sources)}
+        s_last: dict[str, float] = {}
         running: dict[str, Future] = {}
         log.info("Monitoring %s. Ctrl+C to stop.", ", ".join(s.label for s in self.sources))
         with ThreadPoolExecutor(max_workers=max(1, len(self.sources))) as pool:
@@ -338,8 +377,11 @@ class Engine:
                     if f and not f.done():
                         continue
                     if now >= next_run[s.name]:
+                        s_last[s.name] = now
                         running[s.name] = pool.submit(self.run_source_once, s)
-                        next_run[s.name] = now + s.interval * random.uniform(0.85, 1.15)
+                        next_run[s.name] = now + self.effective_interval(s) * random.uniform(0.85, 1.15)
+                    elif self.is_hot():  # drop mode just started: don't wait out a long normal interval
+                        next_run[s.name] = min(next_run[s.name], s_last.get(s.name, now) + self.effective_interval(s))
                 try:
                     reports.scheduled(self, datetime.now())
                 except Exception:  # noqa: BLE001

@@ -3,6 +3,7 @@ from __future__ import annotations
 from ..http import Http
 from .base import Context, Source
 from .bestbuy import BestBuySource
+from .kroger import KrogerSource
 from .pagewatch import PageWatchSource
 from .pokemoncenter import PokemonCenterSource
 from .reddit import RedditSource
@@ -17,6 +18,7 @@ REGISTRY = {
     "target": TargetSource,
     "bestbuy": BestBuySource,
     "walmart": WalmartSource,
+    "kroger": KrogerSource,
     "pokemoncenter": PokemonCenterSource,
     "shopify": ShopifySource,
     "pagewatch": PageWatchSource,

@@ -26,6 +26,8 @@ log = logging.getLogger(__name__)
 PRESETS = {
     "costco": {"name": "Costco", "search_url": "https://www.costco.com/CatalogSearch?dept=All&keyword={q}"},
     "samsclub": {"name": "Sam's Club", "search_url": "https://www.samsclub.com/s/{q}"},
+    "gamestop": {"name": "GameStop", "search_url": "https://www.gamestop.com/search/?q={q}"},
+    "barnesandnoble": {"name": "Barnes & Noble", "search_url": "https://www.barnesandnoble.com/s/{q}"},
     "dollargeneral": {"name": "Dollar General", "search_url": "https://www.dollargeneral.com/search?q={q}"},
     "fivebelow": {"name": "Five Below", "search_url": "https://www.fivebelow.com/search?q={q}"},
     "acehardware": {"name": "Ace Hardware", "search_url": "https://www.acehardware.com/search?query={q}"},

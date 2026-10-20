@@ -23,6 +23,7 @@ alerts:
   below_msrp_alerts: true           # alert when something is listed under MSRP
   new_listing_alerts: true          # alert when a new product page appears (an upcoming drop)
   store_quantity_jump: 3            # a store's qty rising by this much counts as a restock
+  drop_mode: true                   # check 2-2.5x faster on release mornings and while a drop is happening
   quiet_hours:
     enabled: false                  # true = only max-priority (5) alerts during these hours
     start: "23:00"
@@ -62,7 +63,7 @@ sources:
 
   shopify:
     enabled: __SHOPIFY_ENABLED__    # local card shops that run on Shopify
-    interval_seconds: 300
+    interval_seconds: 180
     stores: __SHOPIFY_STORES__
     # - name: "My Local Card Shop"
     #   domain: "mylocalcardshop.com"
@@ -80,12 +81,12 @@ sources:
   sitesearch:
     enabled: true                   # website searches at other stores (experimental: run doctor to see which work)
     interval_seconds: 900
-    sites: [costco, samsclub, dollargeneral, fivebelow, acehardware, dollartree, familydollar]
+    sites: [costco, samsclub, gamestop, barnesandnoble, dollargeneral, fivebelow, acehardware, dollartree, familydollar]
     # custom site:  - {name: "My Store", search_url: "https://example.com/search?q={q}"}
 
   reddit:
     enabled: true
-    interval_seconds: 600
+    interval_seconds: 240
     mode: watchlist                 # watchlist = watched products + local sightings | local_only | all
     subreddits: [PKMNTCGDeals, OnePieceTCG, PokemonTCG]
     local_terms: [__LOCAL_TERMS__]  # your city/towns/malls; posts mentioning them are flagged as local

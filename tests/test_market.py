@@ -101,3 +101,16 @@ def test_retail_preferred(tmp_path):
     run(eng2, src, listing(OUT_OF_STOCK, price=79.99, sku="3"))
     run(eng2, src, listing(IN_STOCK, price=79.99, sku="3"))
     assert not any("RESTOCK" in t for t, _, _ in eng2.n.sent)
+
+
+def test_gate_falls_back_to_msrp_when_tcgplayer_down():
+    class Down:
+        failures = 5
+
+        def find(self, *a, **k):
+            return None
+    cfg = deep_merge(DEFAULTS, {})
+    g = market.PriceGate(cfg, Down())
+    ok, line = g.check("x", 49.99, M)
+    assert ok and "TCGplayer unavailable" in line
+    assert not g.check("x", 129.99, M)[0]

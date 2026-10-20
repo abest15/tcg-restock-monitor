@@ -91,6 +91,7 @@ class MarketLookup:
         self.db = db
         self.refresh = refresh_hours * 3600
         self.min_sim = min_similarity
+        self.failures = 0          # consecutive lookup errors (site down / changed), not "no match"
 
     def _search(self, title: str, game: str) -> list[dict]:
         q = " ".join(w for w in norm(title).split() if w not in ("trading", "card", "game", "tcg"))[:120]
@@ -130,7 +131,9 @@ class MarketLookup:
                     m = Market(c["id"], c["name"], c["market"], c["lowest"])
         except Exception as e:  # noqa: BLE001
             log.info("TCGplayer lookup failed for '%s': %s", title[:60], e)
+            self.failures += 1
             return Market(**cached["m"]) if cached and cached.get("m") else None  # stale is better than none
+        self.failures = 0
         self.db.set(k, {"ts": now, "m": m.__dict__ if m else None})
         if m:
             self.db.x("INSERT OR REPLACE INTO prices (product, ts, market, low) VALUES (?,?,?,?)",
@@ -156,6 +159,10 @@ class PriceGate:
         if price is None:
             return self.unknown == "alert", "Store price not shown, so it can't be compared with TCGplayer"
         mk = self.lookup.find(title, m.game, m.tcgplayer_id)
+        if not mk and getattr(self.lookup, "failures", 0) >= 3:
+            # TCGplayer itself is unreachable; going silent would hide every restock, so fall back to MSRP
+            ok = m.msrp is None or price <= m.msrp * 1.15
+            return ok, "⚠️ TCGplayer unavailable right now, so this was checked against MSRP instead"
         if not mk or not mk.ceiling:
             return self.unknown == "alert", "⚠️ No TCGplayer price found to compare"
         bar = {"market": mk.market, "lowest": mk.lowest}.get(self.compare) or mk.ceiling

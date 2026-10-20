@@ -2,3 +2,4 @@ config.yaml
 data/
 .venv/
 __pycache__/
+keys.yaml

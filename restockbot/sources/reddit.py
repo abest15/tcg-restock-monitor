@@ -35,7 +35,20 @@ def parse_feed(xml_text: str) -> list[dict]:
 STORE_WORDS = ["dollar general", "dollar tree", "family dollar", "five below", "costco", "ace hardware",
                "sam s club", "sams club", "walgreens", "cvs", "kroger", "king soopers", "meijer", "fred meyer"]
 
+# Pokémon TCG vending machines (in Colorado mostly inside King Soopers / Safeway). There's no public
+# stock feed or restock schedule, so collector reports are the signal.
+VENDING = re.compile(r"vending|vend machine|\bpoke ?machine\b|card machine", re.I)
+POKEMON_WORD = re.compile(r"pok[eé]mon|tcg|booster|etb|pack", re.I)
+
 TARGET_LINK = re.compile(r"target\.com/[^\s\"'<>]*?A-(\d{6,10})", re.I)
+
+
+def _vending_place(text: str, local_terms: list[str]) -> str:
+    """Best guess at which machine a report is about: store chain + your town."""
+    town = next((t for t in local_terms if has(text, t)), "")
+    chain = next((c for c in ("king soopers", "safeway", "walmart", "kroger", "albertsons", "fred meyer", "mall")
+                  if has(text, c)), "")
+    return " ".join(x.title() for x in (chain, town) if x) or "Vending machine"
 
 
 class RedditSource(Source):
@@ -87,6 +100,23 @@ class RedditSource(Source):
                 store = next((s for s in STORE_WORDS if has(text, s)), "")
                 m = self.ctx.matcher.match(p["title"]) or self.ctx.matcher.match(p["title"] + " " + p["body"][:300])
                 watched = bool(m and m.watch_id)
+                vending = bool(VENDING.search(p["title"] + " " + p["body"])) and bool(POKEMON_WORD.search(
+                    p["title"] + " " + p["body"]))
+                if vending:
+                    if mode == "local_only" and not is_local:
+                        continue
+                    res.signals.append(Signal(
+                        source=self.name, key=f"reddit:{p['id']}",
+                        title=("🎰📍 Local vending machine report: " if is_local else "🎰 Vending machine report: ")
+                              + p["title"][:110],
+                        message=(p["body"][:300] or p["title"]) + "\nMachine stock isn't published anywhere; "
+                                "collector reports are the only signal.",
+                        url=p["url"], priority=4 if is_local else 2, tags=["slot_machine"], game="pokemon",
+                        quiet=first))
+                    if is_local and not first:
+                        self.ctx.db.add_event(kind="vending_report", retailer="vending", key=p["id"],
+                                              title=p["title"][:150], store_name=_vending_place(text, local))
+                    continue
                 if mode == "local_only" and not is_local:
                     continue
                 if mode == "watchlist" and not (is_local and m) and not watched and not (store and m):

@@ -37,6 +37,9 @@ search_terms:
     - pokemon phantasmal flames
     - pokemon prismatic evolutions
     - pokemon deck crafter
+    - pokemon center elite trainer box
+    - pokemon mini tin
+    - pokemon booster pack
   onepiece:
     - {term: one piece card game, pages: 3}
     - one piece booster box
@@ -46,6 +49,8 @@ search_terms:
     - one piece premium card collection
     - one piece dominance of god
     - one piece heroines edition
+    - one piece extra booster
+    - one piece premium booster
 
 # Online card shops on Shopify (the bot reads their full product list). Restocks and new products
 # alert like any retailer, and only when the price beats TCGplayer.

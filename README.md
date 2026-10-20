@@ -79,6 +79,27 @@ python -m restockbot setup        # re-run the wizard (change ZIP, radius, ...)
 ```
 On Windows, use `.venv\Scripts\python` instead of `python` (or `.venv/bin/python` on Mac/Linux).
 
+## Drop mode: faster when it matters
+
+Alerts go out the moment the bot sees a change. To see changes sooner without getting blocked, the
+bot checks 2-2.5x faster at the times drops actually happen:
+- release-day mornings (midnight to 1pm)
+- for 30 minutes after any watched product restocks anywhere (drops usually hit several stores at once)
+- when the Pokémon Center queue goes up, a local sighting is posted, or a new listing or new set appears
+
+## More in-store stock with free keys
+
+Run `.venv\Scripts\python -m restockbot keys` to add:
+- **Best Buy** (developer.bestbuy.com): pickup stock at nearby Best Buys
+- **Kroger** (developer.kroger.com, register an app with scope `product.compact`): stock level and aisle
+  at nearby King Soopers / Kroger-family stores
+
+## Pokémon vending machines
+
+Machines (in Colorado mostly inside King Soopers and Safeway) don't publish stock or restock times
+anywhere. The bot turns collector posts about machines into 🎰 alerts (📍 when they mention your towns)
+and learns which machines tend to restock on which days.
+
 ## New sets are picked up automatically
 
 You don't need to edit anything when a new set is announced. Twice a day the bot reads the public
