@@ -1,0 +1,265 @@
+# What the bot hunts for. Edit freely; restart the bot to apply changes.
+#
+# Each product entry:
+#   match:   words that must ALL appear in the retailer's title ("a|b" = either a or b)
+#   exclude: if any of these appear, it's not this product
+#   msrp:    expected retail price. Listings above msrp x 1.15 are treated as scalpers and ignored
+#   priority: max (urgent alarm) | high | normal | low
+#   tcgplayer_id: the number in the product's tcgplayer.com URL. Adds resale value to alerts and reports.
+#   name: leave out to use the retailer's own title (good for whole-set catch-alls)
+#
+# First match wins, so put specific entries (Pokémon Center ETB) above general ones (any ETB).
+# Anything Pokémon/One Piece TCG that matches NO entry is still caught by the generic
+# rules (see generic_alerts) at normal priority, so brand-new products aren't missed.
+# Release info current as of Oct 16 2026. Confirm dates on pokemon.com / en.onepiece-cardgame.com.
+
+search_terms:
+  # {term, pages}: broad searches read several pages of results; set names read one page.
+  # Add each new set's name here when it's announced (that's how the bot finds its products).
+  pokemon:
+    - {term: pokemon trading card game, pages: 4}
+    - {term: pokemon cards, pages: 3}
+    - {term: pokemon elite trainer box, pages: 2}
+    - {term: pokemon booster bundle, pages: 2}
+    - pokemon booster box
+    - pokemon tcg tin
+    - pokemon tcg blister
+    - pokemon premium collection
+    - pokemon ultra premium collection
+    - pokemon build and battle
+    - pokemon mega evolution
+    - pokemon delta reign
+    - pokemon 30th celebration
+    - pokemon pitch black
+    - pokemon chaos rising
+    - pokemon perfect order
+    - pokemon ascended heroes
+    - pokemon phantasmal flames
+    - pokemon prismatic evolutions
+    - pokemon deck crafter
+  onepiece:
+    - {term: one piece card game, pages: 3}
+    - one piece booster box
+    - one piece tcg
+    - one piece starter deck
+    - one piece double pack
+    - one piece premium card collection
+    - one piece dominance of god
+    - one piece heroines edition
+
+# Online card shops on Shopify (the bot reads their full product list). Restocks and new products
+# alert like any retailer, and only when the price beats TCGplayer.
+shops:
+  - {name: "Foil Pack Fanatic", domain: "foilpackfanatic.com", pages: 8}
+
+generic_alerts:
+  enabled: true          # alert on any Pokémon/One Piece TCG product, not just the entries below
+  priority: normal
+
+ignore:                  # titles containing any of these are never alerted
+  - code card
+  - lot of
+  - repack
+  - mystery
+  - graded
+  - psa 10
+  - bulk
+
+products:
+  # ---------------- Pokémon: Mega Evolution - Delta Reign (Nov 6, 2026) ----------------
+  - id: dr-pc-etb
+    name: Delta Reign Pokémon Center ETB
+    game: pokemon
+    match: ["delta reign", "pokemon center", "elite trainer|etb"]
+    msrp: 59.99
+    priority: max
+    tcgplayer_id: 712104
+  - id: dr-etb
+    name: Delta Reign Elite Trainer Box
+    game: pokemon
+    match: ["delta reign", "elite trainer|etb"]
+    exclude: ["pokemon center"]
+    msrp: 49.99
+    priority: max
+  - id: dr-booster-box
+    name: Delta Reign Booster Box
+    game: pokemon
+    match: ["delta reign", "booster box|booster display|36"]
+    msrp: 161.64
+    priority: max
+  - id: dr-bundle
+    name: Delta Reign Booster Bundle
+    game: pokemon
+    match: ["delta reign", "booster bundle"]
+    msrp: 26.94
+    priority: high
+  - id: dr-other
+    game: pokemon
+    match: ["delta reign"]          # blisters, build & battle, sleeved boosters, etc.
+    priority: high
+
+  # ---------------- Pokémon: 30th Celebration (Sep 16, 2026 + waves) ----------------
+  - id: 30th-upc
+    name: 30th Celebration Ultra-Premium Collection
+    game: pokemon
+    match: ["30th celebration|30th anniversary", "ultra premium|ultra-premium"]
+    msrp: 179.99
+    priority: max
+  - id: 30th-pc-etb
+    name: 30th Celebration Pokémon Center ETB
+    game: pokemon
+    match: ["30th celebration|30th anniversary", "pokemon center", "elite trainer|etb"]
+    msrp: 59.99
+    priority: max
+  - id: 30th-etb
+    name: 30th Celebration Elite Trainer Box
+    game: pokemon
+    match: ["30th celebration|30th anniversary", "elite trainer|etb"]
+    exclude: ["pokemon center"]
+    msrp: 49.99
+    priority: max
+  - id: 30th-bundle
+    name: 30th Celebration Booster Bundle
+    game: pokemon
+    match: ["30th celebration|30th anniversary", "booster bundle"]
+    msrp: 26.94
+    priority: high
+  - id: 30th-binder
+    name: 30th Celebration Binder Collection
+    game: pokemon
+    match: ["30th celebration|30th anniversary", "binder"]
+    msrp: 31.99
+    priority: high
+  - id: 30th-ditto
+    name: 30th Celebration Ditto Premium Collection
+    game: pokemon
+    match: ["30th celebration|30th anniversary|ditto", "premium collection"]
+    msrp: 39.99
+    priority: high
+  - id: 30th-other
+    game: pokemon
+    match: ["30th celebration|30th anniversary"]   # ex boxes, figure collections, tins, blisters, battle decks
+    priority: high
+
+  # ---------------- Pokémon: other products ----------------
+  - id: deck-crafters
+    name: Deck Crafter's Collection
+    game: pokemon
+    match: ["deck crafter"]
+    msrp: 9.99
+    priority: normal
+  - id: prismatic
+    game: pokemon
+    match: ["prismatic evolutions"]   # still gets reprint waves; strong long-term holder
+    priority: high
+  - id: ascended-heroes
+    game: pokemon
+    match: ["ascended heroes"]
+    priority: high
+  - id: chaos-rising
+    game: pokemon
+    match: ["chaos rising"]
+    priority: high
+  - id: pitch-black
+    game: pokemon
+    match: ["pitch black"]
+    exclude: ["one piece"]
+    priority: high
+  - id: perfect-order
+    game: pokemon
+    match: ["perfect order"]
+    priority: high
+  - id: phantasmal-flames
+    game: pokemon
+    match: ["phantasmal flames"]
+    priority: high
+  - id: mega-evolution-etb
+    game: pokemon
+    match: ["mega evolution", "elite trainer|etb"]
+    msrp: 59.99
+    priority: high
+  - id: mega-evolution
+    game: pokemon
+    match: ["mega evolution"]      # anything else from the current era
+    priority: high
+  - id: any-pc-etb
+    game: pokemon
+    match: ["pokemon center", "elite trainer|etb"]
+    msrp: 59.99
+    priority: high
+  - id: any-upc
+    game: pokemon
+    match: ["pokemon", "ultra premium|ultra-premium"]
+    msrp: 179.99
+    priority: high
+  - id: any-booster-box
+    game: pokemon
+    match: ["pokemon", "booster box|booster display"]
+    exclude: ["one piece"]
+    msrp: 161.64
+    priority: high
+
+  # ---------------- One Piece Card Game (English) ----------------
+  - id: op18-box
+    name: OP-18 The Dominance of God Booster Box
+    game: onepiece
+    match: ["one piece", "dominance of god|op 18|op18", "box|display"]
+    msrp: 119.76
+    priority: max
+  - id: op18-other
+    game: onepiece
+    match: ["one piece", "dominance of god|op 18|op18"]
+    priority: high
+  - id: eb05
+    game: onepiece
+    match: ["one piece", "heroines|eb 05|eb05"]
+    priority: high
+  - id: op17
+    game: onepiece
+    match: ["one piece", "strongest warriors|op 17|op17"]
+    priority: high
+  - id: op16
+    game: onepiece
+    match: ["one piece", "time of battle|op 16|op16"]
+    priority: high
+  - id: op15
+    game: onepiece
+    match: ["one piece", "kami s island|kamis island|op 15|op15"]
+    priority: high
+  - id: op-any-box
+    game: onepiece
+    match: ["one piece", "booster box|display"]
+    msrp: 119.76
+    priority: high
+  - id: op-prb
+    game: onepiece
+    match: ["one piece", "premium booster|prb"]
+    priority: high
+  - id: op-eb04
+    game: onepiece
+    match: ["one piece", "eb 04|eb04|egghead crisis"]
+    priority: high
+  - id: op-anniversary
+    game: onepiece
+    match: ["one piece", "anniversary"]
+    priority: high
+  - id: op-premium-collection
+    game: onepiece
+    match: ["one piece", "premium card collection|best selection"]
+    priority: high
+  - id: op-starter
+    game: onepiece
+    match: ["one piece", "starter deck|ultra deck"]
+    msrp: 17.99
+    priority: normal
+
+# Release calendar: drives the morning-of reminders, the "tomorrow" push and the daily brief.
+releases:
+  - {game: pokemon, date: 2026-10-23, name: "Deck Crafter's Collection ($9.99)"}
+  - {game: pokemon, date: 2026-10-24, kind: prerelease, name: "Delta Reign prerelease events start (local game stores)", notes: "runs through Nov 1"}
+  - {game: pokemon, date: 2026-10-30, name: "30th Celebration Espeon ex & Umbreon ex Battle Decks ($19.99)"}
+  - {game: onepiece, date: 2026-10-30, name: "EB-05 Heroines Edition vol.2 (English, date unconfirmed)"}
+  - {game: pokemon, date: 2026-11-06, name: "Mega Evolution: Delta Reign", notes: "ETB $49.99 · PC ETB $59.99 · bundles · booster boxes"}
+  - {game: pokemon, date: 2026-11-06, name: "30th Celebration Ultra-Premium Collection ($179.99)"}
+  - {game: onepiece, date: 2026-11-20, name: "OP-18 The Dominance of God (English)"}
+  - {game: pokemon, date: 2026-12-04, name: "30th Celebration Binder Collection ($31.99, date unconfirmed)"}

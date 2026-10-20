@@ -1,0 +1,8 @@
+# Your sealed collection. The weekly report shows its current TCGplayer value vs what you paid.
+# tcgplayer_id = the number in the product's tcgplayer.com URL, e.g.
+#   https://www.tcgplayer.com/product/712104/...  ->  712104
+holdings: []
+#  - name: Delta Reign Pokémon Center ETB
+#    tcgplayer_id: 712104
+#    quantity: 2
+#    paid_each: 59.99

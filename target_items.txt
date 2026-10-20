@@ -1,0 +1,4 @@
+# Paste Target product links here, one per line, to always monitor them (online + every nearby store).
+# Example:
+# https://www.target.com/p/pokemon-trading-card-game-mega-evolution-delta-reign-elite-trainer-box/-/A-12345678
+# The bot also adds Target links it sees in Reddit deal posts automatically.

@@ -1,0 +1,99 @@
+# Restock monitor settings. `python -m restockbot setup` writes config.yaml from this file.
+# Edit config.yaml any time, then restart the bot.
+
+location:
+  zip: "__ZIP__"
+  radius_miles: __RADIUS__          # stores farther than this are ignored
+
+games: [pokemon, onepiece]          # remove one to stop tracking it
+
+ntfy:
+  server: https://ntfy.sh
+  topic: "__TOPIC__"                # subscribe to this in the ntfy phone app; keep it private
+  token: ""                         # only if you use a protected/self-hosted ntfy server
+
+alerts:
+  cooldown_minutes: 20              # don't repeat the same alert within this window
+  max_price_multiplier: 1.15        # used only when deal_filter is off
+  deal_filter:                      # only alert when the store price beats TCGplayer (no shipping)
+    enabled: true
+    compare: both                   # both = below market AND lowest listing | market | lowest
+    when_no_tcgplayer_price: skip   # skip = no alert if TCGplayer has no price | alert
+    retail_only: false              # true = also require at/below MSRP (retail-price alerts only)
+  below_msrp_alerts: true           # alert when something is listed under MSRP
+  new_listing_alerts: true          # alert when a new product page appears (an upcoming drop)
+  store_quantity_jump: 3            # a store's qty rising by this much counts as a restock
+  quiet_hours:
+    enabled: false                  # true = only max-priority (5) alerts during these hours
+    start: "23:00"
+    end: "07:00"
+    min_priority: 5
+  daily_digest_time: "08:00"        # morning brief: upcoming releases, last 24h, today's likely restocks
+  restock_forecast_time: "20:00"    # evening push: stores likely to restock tomorrow
+  weekly_report_day: sunday         # 6pm weekly report: store patterns, resale values, portfolio
+
+sources:
+  target:
+    enabled: true                   # online + stock at every Target within your radius
+    interval_seconds: 180
+    search_interval_seconds: 1800   # how often to run a few product searches (Target blocks bursts)
+    searches_per_run: 4
+    max_products_per_cycle: 25
+    max_stores: 20
+    api_key: ""                     # leave blank (auto-detected)
+    home_store_id: ""               # optional: your usual Target's store number
+    tcins: []                       # optional: Target item numbers (the A-######## in a product URL) to always watch
+
+  bestbuy:
+    enabled: __BESTBUY_ENABLED__    # free key: https://developer.bestbuy.com
+    api_key: "__BESTBUY_KEY__"
+    interval_seconds: 180
+
+  walmart:
+    enabled: true                   # online only; Walmart sometimes blocks bots (the bot backs off)
+    interval_seconds: 300
+
+  pokemoncenter:
+    enabled: true                   # alerts when the Pokémon Center queue goes up (= a drop)
+    interval_seconds: 120
+    product_urls: []                # optional exact product pages to watch, e.g.
+    # - name: "Delta Reign Pokémon Center ETB"
+    #   url: "https://www.pokemoncenter.com/product/..."
+
+  shopify:
+    enabled: __SHOPIFY_ENABLED__    # local card shops that run on Shopify
+    interval_seconds: 300
+    stores: __SHOPIFY_STORES__
+    # - name: "My Local Card Shop"
+    #   domain: "mylocalcardshop.com"
+
+  pagewatch:
+    enabled: false                  # any other product page (GameStop, Costco, Sam's, B&N...)
+    interval_seconds: 300
+    pages: []
+    # - name: "Delta Reign ETB @ GameStop"
+    #   url: "https://www.gamestop.com/..."
+    #   price: 49.99
+    #   in_stock_regex: "add to cart"
+    #   out_of_stock_regex: "sold out|not available"
+
+  sitesearch:
+    enabled: true                   # website searches at other stores (experimental: run doctor to see which work)
+    interval_seconds: 900
+    sites: [costco, samsclub, dollargeneral, fivebelow, acehardware, dollartree, familydollar]
+    # custom site:  - {name: "My Store", search_url: "https://example.com/search?q={q}"}
+
+  reddit:
+    enabled: true
+    interval_seconds: 600
+    mode: watchlist                 # watchlist = watched products + local sightings | local_only | all
+    subreddits: [PKMNTCGDeals, OnePieceTCG, PokemonTCG]
+    local_terms: [__LOCAL_TERMS__]  # your city/towns/malls; posts mentioning them are flagged as local
+
+  tcgplayer:
+    enabled: true                   # resale prices for alerts, weekly report and portfolio
+    interval_seconds: 21600
+
+http:
+  timeout_seconds: 20
+  user_agent: ""
