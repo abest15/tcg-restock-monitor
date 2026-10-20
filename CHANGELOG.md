@@ -2,6 +2,9 @@
 
 Newest first. The top section is sent to your phone when the bot updates itself.
 
+## 2.1.1
+- Update notifications now have buttons to the full change list and the how-to guide
+
 ## 2.1.0
 - Drop mode: checks 2-2.5x faster on release-day mornings and right after any watched restock, Pokémon Center queue or new listing
 - King Soopers / Kroger stores: per-store stock levels with aisle, via Kroger's free API (run `python -m restockbot keys` to add a key)

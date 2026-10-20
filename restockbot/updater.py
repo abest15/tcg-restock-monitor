@@ -49,6 +49,9 @@ class Updater:
         self.db = db
         self.n = notifier
 
+    def page(self, name: str) -> str:
+        return f"https://github.com/{self.repo}/blob/{self.branch}/{name}"
+
     def remote_version(self) -> Optional[str]:
         url = f"https://raw.githubusercontent.com/{self.repo}/{self.branch}/restockbot/__init__.py"
         r = self.http.get(url, params={"t": int(time.time())}, check_block=False)
@@ -79,10 +82,14 @@ class Updater:
         except Exception as e:  # noqa: BLE001
             log.exception("update failed; still running v%s", __version__)
             self.n.send("⚠️ Bot update failed", f"Couldn't install v{latest}: {str(e)[:200]}\n"
-                        f"Still running v{__version__}. It will try again later.", priority=3, tags=["warning"])
+                        f"Still running v{__version__}. It will try again later.", priority=3, tags=["warning"],
+                        click=self.page("README.md"))
             return False
         self.n.send(f"🔄 Restock bot updated to v{latest}", (notes or "Improvements and fixes.")[:1500]
-                    + "\nRestarting now. Nothing for you to do.", priority=2, tags=["arrows_counterclockwise"])
+                    + "\nRestarting now. Nothing for you to do.", priority=2, tags=["arrows_counterclockwise"],
+                    click=self.page("CHANGELOG.md"),
+                    actions=[{"action": "view", "label": "📋 What's new", "url": self.page("CHANGELOG.md")},
+                             {"action": "view", "label": "📖 How to use", "url": self.page("README.md")}])
         return True
 
     def install(self) -> str:

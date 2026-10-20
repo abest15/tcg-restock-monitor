@@ -31,6 +31,7 @@ class FakeN:
 
     def send(self, title, msg, **kw):
         self.sent.append(title)
+        self.kw = kw
 
 
 def setup_root(tmp_path, monkeypatch):
@@ -64,6 +65,7 @@ def test_update_installs_and_protects_user_files(tmp_path, monkeypatch):
     assert "mine" in (root / "config.yaml").read_text()             # never overwritten
     assert (root / "watchlist.yaml").read_text() == "products: [new]\n"  # unedited -> replaced
     assert "v99.0.0" in n.sent[-1]
+    assert n.kw["click"] == "https://github.com/abest15/tcg-restock-monitor/blob/main/CHANGELOG.md"
 
 
 def test_edited_watchlist_is_kept_and_bad_update_rolls_back(tmp_path, monkeypatch):
