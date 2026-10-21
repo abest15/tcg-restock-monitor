@@ -251,3 +251,13 @@ def test_daily_brief_lists_only_retail_prices(env):
     reports.scheduled(eng, datetime.now().replace(hour=9))
     brief = next(m for title, m, _ in n.sent if "Daily TCG brief" in title)
     assert "$49.99" in brief and "$129.99" not in brief
+
+
+def test_marketplace_sellers_never_alert(env):
+    eng, src, n = env
+    mk = lambda st, sku, tp: Listing(retailer="walmart", sku=sku, title=ETB, url="u", status=st, price=49.99,
+                                     third_party=tp, seller="CardFlipperLLC" if tp else "Walmart.com")
+    run(eng, src, mk(OUT_OF_STOCK, "1", True), mk(OUT_OF_STOCK, "2", False))
+    run(eng, src, mk(IN_STOCK, "1", True), mk(IN_STOCK, "2", False))
+    restocks = [(t, b) for t, b, _ in n.sent if "RESTOCK" in t]
+    assert len(restocks) == 1 and "sold by Walmart" in restocks[0][1]

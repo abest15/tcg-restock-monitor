@@ -27,6 +27,7 @@ alerts:
   below_msrp_alerts: true           # alert when something is listed under MSRP
   new_listing_alerts: true          # alert when a new product page appears (an upcoming drop)
   store_quantity_jump: 3            # a store's qty rising by this much counts as a restock
+  first_party_only: true            # only listings sold by the store itself (no Walmart Marketplace / Target Plus)
   drop_mode: true                   # check 2-2.5x faster on release mornings and while a drop is happening
   quiet_hours:
     enabled: false                  # true = only max-priority (5) alerts during these hours

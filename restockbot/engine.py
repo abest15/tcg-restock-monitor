@@ -85,6 +85,11 @@ class Engine:
     def _deal(self, l: Listing, m: Match, price_ok: bool) -> tuple[bool, str]:
         """Should a price alert go out? The price rules (retail + a small allowance, and not above
         market value) decide; cached per listing and price."""
+        # only the store itself, never marketplace sellers (Walmart Marketplace, Target Plus, Best Buy
+        # Marketplace), no matter the price
+        if l.third_party and self.cfg["alerts"].get("first_party_only", True):
+            log.info("no alert for %s at %s: third-party seller %s", l.title[:60], l.retailer, l.seller or "?")
+            return False, "third-party seller"
         gate = getattr(self, "gate", None)
         if not gate or not gate.enabled:
             return price_ok, ""
@@ -112,8 +117,8 @@ class Engine:
         parts = [f"Price {money(l.price)}"]
         if m.msrp:
             parts.append(f"MSRP {money(m.msrp)}")
-        if l.third_party and l.seller:
-            parts.append(f"sold by {l.seller}")
+        parts.append(f"sold by {l.seller}" if l.third_party and l.seller
+                     else f"sold by {retailer_name(l.retailer, l)}")
         return " · ".join(parts)
 
     # ---------------- core processing ----------------

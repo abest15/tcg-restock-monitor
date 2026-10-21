@@ -101,6 +101,14 @@ developers, so recent-sales value comes from the market value check. Marketplace
 a known retail price. Costco and Sam's Club bundles are judged per item. Change the allowances under
 `price_rules` in config.yaml, or set `retail_only: true` for retail price or less only.
 
+## Only real stores
+
+Buy alerts link only to the store's own product page (Target, Walmart, Best Buy, Costco, Sam's Club,
+GameStop, King Soopers, Pokémon Center, and any shops you add), and only when **the store itself** sells
+the item. Marketplace sellers on those sites (Walmart Marketplace, Target Plus, Best Buy Marketplace)
+never alert, whatever the price. Every alert says who sells it. eBay is only used as a price check,
+never as a place to buy.
+
 ## Drop mode: faster when it matters
 
 Alerts go out the moment the bot sees a change. To see changes sooner without getting blocked, the

@@ -25,7 +25,8 @@ DEFAULTS: dict[str, Any] = {
         "below_msrp_alerts": True,
         "new_listing_alerts": True,
         "store_quantity_jump": 3,
-        "drop_mode": True,                 # check much faster around release mornings and active drops          # qty increase that counts as an in-store restock
+        "drop_mode": True,
+        "first_party_only": True,          # only listings sold by the store itself, never marketplace sellers                 # check much faster around release mornings and active drops          # qty increase that counts as an in-store restock
         "quiet_hours": {"enabled": False, "start": "23:00", "end": "07:00", "min_priority": 5},
         "daily_digest_time": "08:00",
         "restock_forecast_time": "20:00",

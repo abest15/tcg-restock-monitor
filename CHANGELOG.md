@@ -2,6 +2,10 @@
 
 Newest first. The top section is sent to your phone when the bot updates itself.
 
+## 2.4.0
+- Only listings sold by the store itself alert. Marketplace sellers on Walmart, Target (Target Plus) and Best Buy never alert, whatever the price
+- Every alert shows who sells it ("sold by Walmart")
+
 ## 2.3.0
 - eBay check (optional, free keys): the price must also be at or below the typical eBay asking price for the same new, sealed product. Lots, opened, graded and foreign-language listings are ignored
 - Run `.venv\Scripts\python -m restockbot keys` to add eBay keys
