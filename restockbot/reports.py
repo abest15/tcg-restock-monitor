@@ -194,10 +194,18 @@ def scheduled(engine: "Engine", now: datetime) -> None:
         if counts:
             parts.append(f"Last 24h: {counts.get('online_restock', 0)} online restocks, "
                          f"{counts.get('store_restock', 0)} in-store restocks near you")
-        live = db.q("""SELECT title, retailer, price FROM listings WHERE status IN ('IN_STOCK','LIMITED','PREORDER')
-                       AND watch != '' AND last_seen >= ? ORDER BY last_change DESC LIMIT 6""", (since,))
+        rows = db.q("""SELECT title, retailer, price FROM listings WHERE status IN ('IN_STOCK','LIMITED','PREORDER')
+                       AND watch != '' AND last_seen >= ? AND price IS NOT NULL ORDER BY last_change DESC LIMIT 40""",
+                    (since,))
+        live = []
+        for r in rows:  # only fair prices: at or near retail, never scalper listings
+            m = engine.matcher.match(r["title"])
+            if m and m.msrp and r["price"] <= m.msrp * 1.15:
+                live.append(r)
         if live:
-            parts.append("Buyable now:\n" + "\n".join(f"• {r['title'][:60]} @ {r['retailer']} ${r['price'] or 0:.2f}" for r in live))
+            from .engine import retailer_name
+            parts.append("Buyable at retail now:\n" + "\n".join(
+                f"• {r['title'][:60]} @ {retailer_name(r['retailer'])} ${r['price']:.2f}" for r in live[:6]))
         fc = forecast(db, now.date())
         if fc:
             parts.append("Likely in-store restocks today:\n" + "\n".join(f"• {p['store']} (seen {n} recent {DAYS[now.weekday()]}s)" for p, n in fc[:5]))

@@ -2,6 +2,9 @@
 
 Newest first. The top section is sent to your phone when the bot updates itself.
 
+## 2.1.3
+- Morning brief's "buyable now" list shows only items at or near retail price, never scalper listings
+
 ## 2.1.2
 - Walmart: at most 6 searches per round (was ~17) with human-like pauses, so it stops getting blocked; page 1 of the main searches still runs every round
 - Fixed: stores were checked in parallel over one shared connection, which can fail at random. Each store now has its own

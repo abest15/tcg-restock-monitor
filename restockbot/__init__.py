@@ -1,3 +1,3 @@
 """Pokémon & One Piece TCG restock monitor with phone alerts via ntfy."""
 
-__version__ = "2.1.2"
+__version__ = "2.1.3"

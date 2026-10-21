@@ -238,3 +238,16 @@ def test_startup_snapshot_not_counted_as_restock(env):
     eng, src, n = env
     run(eng, src, listing(IN_STOCK))   # first run: already in stock
     assert eng.db.q("SELECT COUNT(*) c FROM events WHERE kind='online_restock'")[0]["c"] == 0
+
+
+def test_daily_brief_lists_only_retail_prices(env):
+    eng, src, n = env
+    eng.watchlist["releases"] = []
+    t = time.time()
+    for sku, price in (("a", 49.99), ("b", 129.99)):
+        eng.db.x("""INSERT INTO listings (key, retailer, sku, title, url, status, price, watch, game, first_seen,
+                    last_seen, last_change) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                 (f"walmart:{sku}", "walmart", sku, ETB, "u", "IN_STOCK", price, "dr-etb", "pokemon", t, t, t))
+    reports.scheduled(eng, datetime.now().replace(hour=9))
+    brief = next(m for title, m, _ in n.sent if "Daily TCG brief" in title)
+    assert "$49.99" in brief and "$129.99" not in brief
