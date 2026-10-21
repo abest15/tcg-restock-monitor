@@ -203,11 +203,12 @@ class Engine:
                            url=l.url, actions=actions, tags=[game_tag, "shopping_cart"], image=l.image)
             elif not price_ok and not getattr(self, "gate", None):
                 log.info("ignored overpriced %s at %s (%s > MSRP %s)", l.title, name, money(l.price), money(m.msrp))
-            if price_ok:
-                if m.priority >= 4 and not silent:
+            if price_ok and not silent:  # startup snapshot isn't a restock; keep it out of the history
+                if m.priority >= 4:
                     self.heat(30, f"{l.title[:50]} restocked at {name}")
                 self.db.add_event(kind="online_restock", retailer=l.retailer, key=l.key, title=l.title,
                                   price=l.price, game=m.game, watch=m.watch_id)
+            if price_ok:
                 hot_desc = f"• {label} @ {name} {money(l.price)}" if m.priority >= 4 else None
         elif prev is None and not silent and self.cfg["alerts"]["new_listing_alerts"] and l.status in (COMING_SOON, OUT_OF_STOCK, UNKNOWN) \
                 and (m.watch_id or m.priority >= 3) and not l.third_party \
@@ -365,16 +366,27 @@ class Engine:
         if err:
             h["error"] = err[:200]
         self.db.set(k, h)
-        # tell the user once if a source has been failing for ~an hour
-        if h["fails"] and h["fails"] * src.interval >= 3600 and not h.get("warned"):
-            h["warned"] = True
+        # Short blocks are normal (retailers rate-limit, the bot backs off and recovers by itself), so only
+        # tell the user when a source has been down for a long stretch, and again when it recovers.
+        if h["fails"] and not h.get("warned"):
+            h.setdefault("down_since", time.time())
             self.db.set(k, h)
-            self.n.send(f"⚠️ {src.label} checks are failing",
-                        f"{src.label} has failed for about an hour ({h.get('error', 'blocked or offline')}). "
-                        "The bot keeps retrying. Run `python -m restockbot doctor` to diagnose.",
-                        priority=3, tags=["warning"])
+            if time.time() - h["down_since"] >= float(self.cfg["alerts"].get("source_down_hours", 3)) * 3600:
+                h["warned"] = True
+                self.db.set(k, h)
+                self.n.send(f"⚠️ {src.label} has been blocked for a few hours",
+                            f"{src.label} keeps refusing the bot ({h.get('error', 'blocked')[:120]}). This is usually "
+                            "temporary rate-limiting; the bot backs off and retries on its own. Other stores and "
+                            "in-store checks are unaffected. If it lasts more than a day, run "
+                            "`.venv\\Scripts\\python -m restockbot doctor` and send the result to Claude.",
+                            priority=2, tags=["warning"])
+        if ok and "down_since" in h:
+            h.pop("down_since")
+            self.db.set(k, h)
         if ok and h.get("warned"):
             h["warned"] = False
+            self.n.send(f"✅ {src.label} is working again", "Checks are back to normal.", priority=2,
+                        tags=["white_check_mark"])
             self.db.set(k, h)
 
     def run_forever(self) -> bool:

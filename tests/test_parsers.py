@@ -337,3 +337,42 @@ def test_kroger_parsers_and_check(tmp_path):
     l = res.listings[0]
     assert l.retailer == "kroger" and l.stores[0].status == LIMITED and "Toys" in l.stores[0].address
     assert l.stores_checked and l.url.startswith("https://www.kingsoopers.com/")
+
+
+def test_walmart_request_budget_and_rotation(tmp_path, monkeypatch):
+    from restockbot.db import DB
+    from restockbot.sources.base import Context
+    from restockbot.config import DEFAULTS, deep_merge
+    cfg = deep_merge(DEFAULTS, {})
+    ctx = Context(cfg, load_watchlist(), matcher(), DB(tmp_path / "w.db"))
+    src = walmart.WalmartSource({"max_requests_per_cycle": 6}, None, ctx)
+    always, rotating = src.queues()
+    seen = set()
+    cycles = -(-len(rotating) // (6 - len(always)))
+    for _ in range(cycles):
+        plan = src.plan()
+        assert len(plan) <= 6 and plan[:len(always)] == always   # page 1 of broad searches every cycle
+        seen.update(plan)
+    assert set(rotating) <= seen                                 # everything gets searched in a full rotation
+
+
+def test_source_down_alert_waits_and_recovery_notice(tmp_path):
+    from tests.test_engine import Capture
+    from restockbot.engine import Engine
+    from restockbot.db import DB
+    from restockbot.config import DEFAULTS, deep_merge
+    import time as _t
+    cfg = deep_merge(DEFAULTS, {})
+    n = Capture(cfg)
+    eng = Engine(cfg, load_watchlist(), DB(tmp_path / "h.db"), matcher(), n, [])
+    src = type("S", (), {"name": "walmart", "label": "Walmart", "interval": 300})()
+    eng._health(src, ok=False, err="blocked")
+    eng._health(src, ok=False, err="blocked")
+    assert n.sent == []                                          # short blocks are silent
+    h = eng.db.get("health:walmart")
+    h["down_since"] = _t.time() - 4 * 3600
+    eng.db.set("health:walmart", h)
+    eng._health(src, ok=False, err="blocked")
+    assert "blocked for a few hours" in n.sent[-1][0]
+    eng._health(src, ok=True)
+    assert "working again" in n.sent[-1][0]

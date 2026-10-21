@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import random
+import threading
 import time
 from typing import Optional
 
@@ -40,24 +41,39 @@ class Http:
 
     def __init__(self, timeout: float = 20, user_agent: str = ""):
         self.timeout = timeout
+        self.user_agent = user_agent
         self.browser = browser_requests is not None
-        if self.browser:
-            # browser profile supplies a matching User-Agent and header set
-            self.s = browser_requests.Session(impersonate="chrome")
-            self.s.headers.update({"Accept-Language": "en-US,en;q=0.9"})
-            if user_agent:
-                self.s.headers["User-Agent"] = user_agent
-        else:
+        if not self.browser:
             log.warning("curl_cffi not installed: using plain Python connections, which stores block more often. "
                         "Fix: .venv\\Scripts\\python -m pip install curl_cffi")
-            self.s = requests.Session()
-            self.s.headers.update({
-                "User-Agent": user_agent or DEFAULT_UA,
-                "Accept-Language": "en-US,en;q=0.9",
-                "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
-            })
+        # Stores are checked in parallel threads. curl_cffi sessions aren't safe to share between threads,
+        # so each thread gets its own session (cookies stay per-thread, which is fine: one source = one thread).
+        self._local = threading.local()
         self._backoff_until: dict[str, float] = {}
         self._strikes: dict[str, int] = {}
+
+    @property
+    def s(self):
+        sess = getattr(self._local, "session", None)
+        if sess is None:
+            sess = self._new_session()
+            self._local.session = sess
+        return sess
+
+    def _new_session(self):
+        if self.browser:
+            sess = browser_requests.Session(impersonate="chrome")  # matching Chrome User-Agent and headers
+            sess.headers.update({"Accept-Language": "en-US,en;q=0.9"})
+            if self.user_agent:
+                sess.headers["User-Agent"] = self.user_agent
+            return sess
+        sess = requests.Session()
+        sess.headers.update({
+            "User-Agent": self.user_agent or DEFAULT_UA,
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept": "text/html,application/json;q=0.9,*/*;q=0.8",
+        })
+        return sess
 
     def _host(self, url: str) -> str:
         return url.split("/")[2] if "://" in url else url

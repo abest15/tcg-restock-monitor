@@ -232,3 +232,9 @@ def test_add_to_cart_buttons():
     w = Listing(retailer="walmart", sku="13579", title="x", url="u")
     assert cart_url(w) == "https://affil.walmart.com/cart/addToCart?items=13579"
     assert cart_url(Listing(retailer="target", sku="1", title="x", url="u")) == ""
+
+
+def test_startup_snapshot_not_counted_as_restock(env):
+    eng, src, n = env
+    run(eng, src, listing(IN_STOCK))   # first run: already in stock
+    assert eng.db.q("SELECT COUNT(*) c FROM events WHERE kind='online_restock'")[0]["c"] == 0

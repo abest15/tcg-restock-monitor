@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import time
 
 from ..models import COMING_SOON, IN_STOCK, LIMITED, OUT_OF_STOCK, PREORDER, UNKNOWN, CheckResult, Listing
@@ -52,30 +53,39 @@ class WalmartSource(Source):
         self.offset = 0
         self.cycles = 0
 
+    def queues(self) -> tuple[list[tuple[str, int, str]], list[tuple[str, int, str]]]:
+        """(every cycle, rotating). Page 1 of the broad searches catches restocks of anything popular,
+        so it runs every cycle; deeper pages, newest-first and set-name searches take turns."""
+        broad = [t for t, n in self.ctx.search_plan if n > 1]
+        always = [(t, 1, "") for t in broad[:2]]
+        rotating = [(t, p, "") for t, n in self.ctx.search_plan if n > 1 for p in range(1, n + 1)
+                    if (t, p, "") not in always]
+        rotating += [(t, 1, "new") for t in broad[:2]]
+        rotating += [(t, 1, "") for t, n in self.ctx.search_plan if n <= 1]
+        return always, rotating
+
     def plan(self) -> list[tuple[str, int, str]]:
-        """Broad multi-page terms every cycle (plus a newest-first pass, which surfaces new
-        listings and pre-orders); specific set terms rotate a few per cycle to stay under
-        Walmart's bot limits."""
-        broad_terms = [t for t, n in self.ctx.search_plan if n > 1]
-        broad = [(t, p, "") for t, n in self.ctx.search_plan if n > 1 for p in range(1, n + 1)]
-        broad += [(t, 1, "new") for t in broad_terms[:2]]
-        narrow = [(t, 1, "") for t, n in self.ctx.search_plan if n <= 1]
-        k = int(self.scfg.get("terms_per_cycle", 6))
-        if narrow:
-            self.offset %= len(narrow)
-            narrow = (narrow[self.offset:] + narrow[:self.offset])[:k]
-            self.offset += k
-        return broad + narrow
+        """At most `max_requests_per_cycle` searches. Walmart's bot protection blocks bursts,
+        and a block costs far more coverage than a smaller, steady search plan."""
+        always, rotating = self.queues()
+        budget = max(1, int(self.scfg.get("max_requests_per_cycle", 6)) - len(always))
+        if rotating:
+            self.offset %= len(rotating)
+            rotating = (rotating[self.offset:] + rotating[:self.offset])[:budget]
+            self.offset += budget
+        return always + rotating
 
     def check(self) -> CheckResult:
         res = CheckResult()
         seen: set[str] = set()
         self.cycles += 1
-        narrow = sum(1 for _, n in self.ctx.search_plan if n <= 1)
-        k = int(self.scfg.get("terms_per_cycle", 6))
-        # until every term has been searched once, anything found is "already existed", not news
-        warming_up = self.cycles <= -(-narrow // k) if narrow else self.cycles <= 1
-        for term, pg, sort in self.plan():
+        always, rotating = self.queues()
+        budget = max(1, int(self.scfg.get("max_requests_per_cycle", 6)) - len(always))
+        # until every search has run once, anything found is "already existed", not news
+        warming_up = self.cycles <= max(1, -(-len(rotating) // budget))
+        for i, (term, pg, sort) in enumerate(self.plan()):
+            if i:
+                time.sleep(random.uniform(4, 9))  # human-ish pacing
             try:
                 params = {"q": term} if pg == 1 else {"q": term, "page": pg}
                 if sort:
@@ -90,5 +100,4 @@ class WalmartSource(Source):
                     seen.add(l.sku)
                     l.new_discovery = not warming_up
                     res.listings.append(l)
-            time.sleep(3)
         return res
