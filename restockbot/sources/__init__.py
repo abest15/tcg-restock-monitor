@@ -3,6 +3,7 @@ from __future__ import annotations
 from ..http import Http
 from .base import Context, Source
 from .bestbuy import BestBuySource
+from .ebay_deals import EbayDealsSource
 from .kroger import KrogerSource
 from .pagewatch import PageWatchSource
 from .pokemoncenter import PokemonCenterSource
@@ -19,6 +20,7 @@ REGISTRY = {
     "bestbuy": BestBuySource,
     "walmart": WalmartSource,
     "kroger": KrogerSource,
+    "ebay": EbayDealsSource,
     "pokemoncenter": PokemonCenterSource,
     "shopify": ShopifySource,
     "pagewatch": PageWatchSource,
@@ -32,6 +34,8 @@ REGISTRY = {
 def is_enabled(name: str, scfg: dict, watchlist: dict) -> bool:
     if name == "shopify" and watchlist.get("shops"):
         return True
+    if name == "ebay":
+        return bool(scfg.get("enabled", True) and scfg.get("client_id") and scfg.get("client_secret"))
     if name == "kroger":  # needs free API keys; stays off (and quiet) until they're added
         return bool(scfg.get("enabled") and scfg.get("client_id") and scfg.get("client_secret"))
     return bool(scfg.get("enabled"))
@@ -50,7 +54,7 @@ def build_sources(cfg: dict, watchlist: dict, http: Http, ctx: Context, only: li
             out.append(cls(scfg, http, ctx, tracker=ctx.tracker))
         elif cls is ShopifySource:
             out.append(cls(scfg, http, ctx, shops=watchlist.get("shops") or []))
-        elif cls is TCGplayerSource:
+        elif cls in (TCGplayerSource, EbayDealsSource):
             out.append(cls(scfg, http, ctx, watchlist=watchlist))
         else:
             out.append(cls(scfg, http, ctx))

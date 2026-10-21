@@ -2,6 +2,9 @@
 
 Newest first. The top section is sent to your phone when the bot updates itself.
 
+## 2.5.0
+- eBay under-MSRP alerts (free eBay keys): watched products listed at or under MSRP including shipping, from sellers with 99%+ positive feedback and 500+ ratings. New, sealed, Buy It Now, US listings only
+
 ## 2.4.0
 - Only listings sold by the store itself alert. Marketplace sellers on Walmart, Target (Target Plus) and Best Buy never alert, whatever the price
 - Every alert shows who sells it ("sold by Walmart")

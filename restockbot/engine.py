@@ -300,7 +300,7 @@ class Engine:
             return
         if s.source == "pokemoncenter" or (s.source == "reddit" and s.priority >= 4) or s.source == "sets":
             self.heat(45, s.title[:60])
-        cooldown = 86400 * 30 if s.source == "reddit" else 1800
+        cooldown = 86400 * 30 if s.source == "reddit" else (86400 * 7 if s.source == "ebay" else 1800)
         tags = s.tags + ([GAME_TAG[s.game]] if s.game in GAME_TAG else [])
         actions = [view_action("Open", s.url)] if s.url else None
         self._send(f"signal:{s.key}", s.title, s.message, priority=s.priority, tags=tags, url=s.url,

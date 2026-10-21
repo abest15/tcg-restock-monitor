@@ -109,6 +109,15 @@ the item. Marketplace sellers on those sites (Walmart Marketplace, Target Plus, 
 never alert, whatever the price. Every alert says who sells it. eBay is only used as a price check,
 never as a place to buy.
 
+## eBay listings under MSRP
+
+With free eBay keys (`python -m restockbot keys`), the bot also searches eBay every 10 minutes for each
+watched product with a known retail price. It alerts (🏷️) when a listing costs **at or under MSRP
+including shipping** and the seller has **99%+ positive feedback and 500+ ratings**. Underpriced listings
+of hot products are a common scam, so new or low-rated sellers never alert. Only new, sealed, Buy It Now
+listings shipped from the US count; lots, opened, graded and foreign-language listings are skipped. Change
+the limits under `sources: ebay:` in config.yaml (`min_feedback_percent`, `min_feedback_score`).
+
 ## Drop mode: faster when it matters
 
 Alerts go out the moment the bot sees a change. To see changes sooner without getting blocked, the

@@ -121,3 +121,49 @@ def test_ebay_listing_filter_and_gate():
     assert ok and "eBay asking ~$55.00" in line
     ok, line = g.check(title, 57.99, M)                 # within retail allowance but above eBay asking
     assert not ok and "eBay asking $55.00" in line
+
+
+def test_ebay_under_msrp_deals_filter():
+    from restockbot.sources.ebay_deals import parse_deals
+    good = {"username": "cardking", "feedbackPercentage": "99.8", "feedbackScore": 12400}
+    newbie = {"username": "newacct", "feedbackPercentage": "100.0", "feedbackScore": 3}
+    meh = {"username": "meh", "feedbackPercentage": "97.1", "feedbackScore": 9000}
+    item = lambda t, p, ship, s, i: {"itemId": i, "title": t, "price": {"value": p}, "seller": s,
+                                     "shippingOptions": [{"shippingCost": {"value": ship}}], "itemWebUrl": f"https://ebay/{i}"}
+    data = {"itemSummaries": [
+        item("Pokemon Delta Reign Elite Trainer Box Sealed", "44.99", "0.00", good, "1"),     # deal
+        item("Pokemon Delta Reign Elite Trainer Box Sealed", "42.00", "9.99", good, "2"),     # $51.99 with shipping
+        item("Pokemon Delta Reign Elite Trainer Box", "39.99", "0.00", newbie, "3"),          # too few ratings (scam risk)
+        item("Pokemon Delta Reign Elite Trainer Box", "39.99", "0.00", meh, "4"),             # 97% positive
+        item("Pokemon Delta Reign Booster Bundle", "25.00", "0.00", good, "5"),               # different product
+        item("Lot of 2 Delta Reign Elite Trainer Box", "45.00", "0.00", good, "6"),           # lot
+    ]}
+    deals = parse_deals(data, "Delta Reign Elite Trainer Box", 49.99, min_pct=99, min_score=500)
+    assert [d["id"] for d in deals] == ["1"] and deals[0]["total"] == 44.99
+
+
+def test_ebay_source_signals(tmp_path, monkeypatch):
+    from restockbot.db import DB
+    from restockbot.sources.base import Context
+    from restockbot.sources.ebay_deals import EbayDealsSource
+    from restockbot.config import load_watchlist
+    from restockbot.matcher import Matcher
+    cfg = deep_merge(DEFAULTS, {"sources": {"ebay": {"client_id": "a", "client_secret": "b"}}})
+    wl = load_watchlist()
+    ctx = Context(cfg, wl, Matcher(wl, cfg["games"]), DB(tmp_path / "e.db"))
+
+    class FakeLookup:
+        def search(self, q, filt, limit=50):
+            if "Delta Reign Elite Trainer Box" not in q or "Pokemon Center" in q:
+                return {}
+            return {"itemSummaries": [{"itemId": "9", "title": "Pokemon Delta Reign Elite Trainer Box",
+                                       "price": {"value": "47.50"}, "itemWebUrl": "https://ebay/9",
+                                       "seller": {"username": "cardking", "feedbackPercentage": "99.9",
+                                                  "feedbackScore": 5000}}]}
+    src = EbayDealsSource(cfg["sources"]["ebay"], None, ctx, watchlist=wl)
+    src.lookup = FakeLookup()
+    import restockbot.sources.ebay_deals as ed
+    monkeypatch.setattr(ed.time, "sleep", lambda s: None)
+    sig = src.check().signals
+    assert len(sig) == 1 and "$47.50" in sig[0].title and "99.9% positive" in sig[0].message
+    assert sig[0].url == "https://ebay/9"

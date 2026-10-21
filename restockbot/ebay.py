@@ -75,6 +75,10 @@ class EbayLookup:
         self.token, self.token_exp = j["access_token"], time.time() + float(j.get("expires_in", 7200))
         return self.token
 
+    def search(self, q: str, filt: str, limit: int = 100) -> dict:
+        return self.http.json(SEARCH_URL, check_block=False, params={"q": q, "limit": limit, "filter": filt},
+                              headers={"Authorization": f"Bearer {self._token()}", "X-EBAY-C-MARKETPLACE-ID": "EBAY_US"})
+
     def asking(self, title: str) -> Optional[Asking]:
         k = f"ebay:{norm(title).strip()}"
         cached = self.db.get(k)

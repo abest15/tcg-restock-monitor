@@ -37,6 +37,8 @@ DEFAULTS: dict[str, Any] = {
                    "search_interval_seconds": 1800, "max_stores": 20, "api_key": ""},
         "bestbuy": {"enabled": False, "interval_seconds": 180, "api_key": ""},
         "walmart": {"enabled": True, "interval_seconds": 300},
+        "ebay": {"enabled": True, "interval_seconds": 600, "client_id": "", "client_secret": "",
+                 "min_feedback_percent": 99, "min_feedback_score": 500, "max_vs_msrp": 1.0, "include_shipping": True},
         "kroger": {"enabled": True, "interval_seconds": 1200, "client_id": "", "client_secret": "", "max_stores": 8},
         "pokemoncenter": {"enabled": True, "interval_seconds": 120, "product_urls": []},
         "shopify": {"enabled": False, "interval_seconds": 180, "stores": []},
