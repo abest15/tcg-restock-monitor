@@ -40,6 +40,10 @@ STORE_WORDS = ["dollar general", "dollar tree", "family dollar", "five below", "
 VENDING = re.compile(r"vending|vend machine|\bpoke ?machine\b|card machine", re.I)
 POKEMON_WORD = re.compile(r"pok[eé]mon|tcg|booster|etb|pack", re.I)
 
+# drawings, lotteries, raffles and invite-only sales (Walmart drawings, Best Buy invites, Amazon "request an
+# invitation", ...): collector posts are often the first word
+DRAWING = re.compile(r"\bdrawing\b|\blottery\b|\braffle\b|invite[- ]only|request (?:an )?invit|\binvitation\b", re.I)
+
 TARGET_LINK = re.compile(r"target\.com/[^\s\"'<>]*?A-(\d{6,10})", re.I)
 
 
@@ -102,6 +106,14 @@ class RedditSource(Source):
                 watched = bool(m and m.watch_id)
                 vending = bool(VENDING.search(p["title"] + " " + p["body"])) and bool(POKEMON_WORD.search(
                     p["title"] + " " + p["body"]))
+                if DRAWING.search(p["title"]) and POKEMON_WORD.search(p["title"] + " " + p["body"]) \
+                        and mode != "local_only":
+                    res.signals.append(Signal(
+                        source=self.name, key=f"reddit:{p['id']}",
+                        title="🎟️ Drawing / invite news: " + p["title"][:120],
+                        message=p["body"][:300] or p["title"], url=p["url"], priority=4, tags=["tickets"],
+                        game=m.game if m else "pokemon", quiet=first))
+                    continue
                 if vending:
                     if mode == "local_only" and not is_local:
                         continue

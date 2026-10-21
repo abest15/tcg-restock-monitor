@@ -206,6 +206,12 @@ def scheduled(engine: "Engine", now: datetime) -> None:
             from .engine import retailer_name
             parts.append("Buyable at retail now:\n" + "\n".join(
                 f"• {r['title'][:60]} @ {retailer_name(r['retailer'])} ${r['price']:.2f}" for r in live[:6]))
+        d = db.get("drawing:Walmart")
+        if d and d["end"] > time.time():
+            from .sources.drawings import local
+            from datetime import timezone as _tz
+            parts.append(f"🎟️ Walmart drawing: entry {local(datetime.fromtimestamp(d['start'], _tz.utc))} (your time)"
+                         + ("\n" + "\n".join(f"• {n[:60]}" for n in d["items"][:5]) if d["items"] else ""))
         fc = forecast(db, now.date())
         if fc:
             parts.append("Likely in-store restocks today:\n" + "\n".join(f"• {p['store']} (seen {n} recent {DAYS[now.weekday()]}s)" for p, n in fc[:5]))

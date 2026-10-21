@@ -376,3 +376,25 @@ def test_source_down_alert_waits_and_recovery_notice(tmp_path):
     assert "blocked for a few hours" in n.sent[-1][0]
     eng._health(src, ok=True)
     assert "working again" in n.sent[-1][0]
+
+
+def test_reddit_drawing_news(tmp_path):
+    from restockbot.db import DB
+    from restockbot.sources.base import Context
+    from restockbot.config import DEFAULTS
+    ctx = Context(DEFAULTS, load_watchlist(), matcher(), DB(tmp_path / "r.db"))
+
+    class Http:
+        def __init__(self, xml):
+            self.xml = xml
+
+        def get(self, *a, **k):
+            return type("R", (), {"text": self.xml})()
+
+    feed = lambda i, t: (f'<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><entry><id>{i}</id>'
+                         f'<title>{t}</title><link href="https://r/{i}"/><content>x</content></entry></feed>')
+    src = reddit.RedditSource(DEFAULTS["sources"]["reddit"], Http(feed("a", "old")), ctx)
+    src.check()
+    src.http = Http(feed("b", "Best Buy invite-only sale for Pokemon Ascended Heroes ETB opens Friday"))
+    sig = src.check().signals
+    assert sig and sig[0].title.startswith("🎟️ Drawing / invite news")

@@ -3,6 +3,7 @@ from __future__ import annotations
 from ..http import Http
 from .base import Context, Source
 from .bestbuy import BestBuySource
+from .drawings import DrawingsSource
 from .ebay_deals import EbayDealsSource
 from .kroger import KrogerSource
 from .pagewatch import PageWatchSource
@@ -19,6 +20,7 @@ REGISTRY = {
     "target": TargetSource,
     "bestbuy": BestBuySource,
     "walmart": WalmartSource,
+    "drawings": DrawingsSource,
     "kroger": KrogerSource,
     "ebay": EbayDealsSource,
     "pokemoncenter": PokemonCenterSource,
@@ -54,7 +56,7 @@ def build_sources(cfg: dict, watchlist: dict, http: Http, ctx: Context, only: li
             out.append(cls(scfg, http, ctx, tracker=ctx.tracker))
         elif cls is ShopifySource:
             out.append(cls(scfg, http, ctx, shops=watchlist.get("shops") or []))
-        elif cls in (TCGplayerSource, EbayDealsSource):
+        elif cls in (TCGplayerSource, EbayDealsSource, DrawingsSource):
             out.append(cls(scfg, http, ctx, watchlist=watchlist))
         else:
             out.append(cls(scfg, http, ctx))

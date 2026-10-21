@@ -2,6 +2,11 @@
 
 Newest first. The top section is sent to your phone when the bot updates itself.
 
+## 2.6.0
+- Walmart drawings (lotteries): alerts when a drawing with Pokémon or One Piece items is posted, 15 minutes before entry opens, and an urgent "OPEN NOW" while the window is live, all in your local time
+- Collector posts about drawings, lotteries, raffles and invite-only sales (Best Buy invites, Amazon invitations...) now alert
+- The morning brief lists any upcoming Walmart drawing
+
 ## 2.5.0
 - eBay under-MSRP alerts (free eBay keys): watched products listed at or under MSRP including shipping, from sellers with 99%+ positive feedback and 500+ ratings. New, sealed, Buy It Now, US listings only
 

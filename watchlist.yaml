@@ -57,6 +57,10 @@ search_terms:
 shops:
   - {name: "Foil Pack Fanatic", domain: "foilpackfanatic.com", pages: 8}
 
+# Drawing (lottery) pages. Walmart's collectibles drawing page is always watched; add others here if a
+# store starts its own, e.g.  - {name: "Target", url: "https://www.target.com/..."}
+drawings: []
+
 generic_alerts:
   enabled: true          # alert on any Pokémon/One Piece TCG product, not just the entries below
   priority: normal

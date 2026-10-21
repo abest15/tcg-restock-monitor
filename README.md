@@ -109,6 +109,21 @@ the item. Marketplace sellers on those sites (Walmart Marketplace, Target Plus, 
 never alert, whatever the price. Every alert says who sells it. eBay is only used as a price check,
 never as a place to buy.
 
+## Drawings (lotteries) and invite-only sales
+
+Walmart runs drawings for hot Pokémon products on https://www.walmart.com/shop/collectibles/draw, with
+short entry windows (often Wednesdays around 2-3pm PT / 3-4pm in Colorado). Winners are picked at random,
+so speed doesn't matter, but you have to enter during the window. The bot checks that page every 5
+minutes and alerts:
+- 🎟️ when a drawing with Pokémon / One Piece items is posted, showing the items and the window in your time
+- ⏰ 15 minutes before entry opens
+- 🎟️🚨 "OPEN NOW" while the window is live
+
+Before entering, sign in and set your shipping address, payment card and quantity; they're locked to
+your entry, and winners are charged automatically. Collector posts about drawings, lotteries and
+invite-only sales at any store (Best Buy invites, Amazon "request an invitation") also alert. If another
+store starts its own drawing page, add it under `drawings:` in watchlist.yaml.
+
 ## eBay listings under MSRP
 
 With free eBay keys (`python -m restockbot keys`), the bot also searches eBay every 10 minutes for each

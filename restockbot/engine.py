@@ -298,7 +298,7 @@ class Engine:
         if s.quiet:
             self.db.mark_sent(f"signal:{s.key}")
             return
-        if s.source == "pokemoncenter" or (s.source == "reddit" and s.priority >= 4) or s.source == "sets":
+        if s.source in ("pokemoncenter", "sets", "drawings") or (s.source == "reddit" and s.priority >= 4):
             self.heat(45, s.title[:60])
         cooldown = 86400 * 30 if s.source == "reddit" else (86400 * 7 if s.source == "ebay" else 1800)
         tags = s.tags + ([GAME_TAG[s.game]] if s.game in GAME_TAG else [])
@@ -310,7 +310,7 @@ class Engine:
     # Checking everything every few seconds gets the bot blocked (and then it sees nothing), so it checks
     # fast only when a drop is likely: release-day mornings, right after a watched restock anywhere
     # (drops hit several retailers at once), when the Pokémon Center queue goes up, or a new listing appears.
-    HOT_FACTOR = {"target": 0.4, "walmart": 0.4, "bestbuy": 0.5, "shopify": 0.4, "sitesearch": 0.5,
+    HOT_FACTOR = {"drawings": 0.4, "target": 0.4, "walmart": 0.4, "bestbuy": 0.5, "shopify": 0.4, "sitesearch": 0.5,
                   "reddit": 0.5, "pokemoncenter": 0.5}
     MIN_INTERVAL = 45.0
 
