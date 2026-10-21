@@ -8,7 +8,7 @@ tends to restock.
 
 | Alert | Example | Priority |
 |---|---|---|
-| 🚨 Online restock / pre-order open | "RESTOCK at Target: Delta Reign Elite Trainer Box · $49.99 · MSRP $49.99 · 🔥 Resale ~$95" + **Buy now** button | urgent for `max` items |
+| 🚨 Online restock / pre-order open | "RESTOCK at Target: Delta Reign Elite Trainer Box · ✅ RETAIL PRICE $49.99 · market value $95" + **Buy now** button | urgent for `max` items |
 | 🏬 In-store restock near you | "IN-STORE: 30th Celebration ETB at Target Midtown +2 more · 📍 Midtown (2.4 mi) 6 in stock · pickup ✅" + **Order pickup** and **Directions** buttons | high |
 | 👀 New listing | A new product page appeared at Target/Best Buy/Walmart (an upcoming drop) | normal |
 | 💲 Below MSRP | A watched item listed ≥5% under MSRP | high |
@@ -17,7 +17,7 @@ tends to restock.
 | 📦 Releasing today | 7am on release days (Delta Reign Nov 6, OP-18 Nov 20, …) | high |
 | ☀️ Daily brief (8am) | Upcoming releases, last 24h restocks, stores likely to restock today | low |
 | 🔮 Tomorrow's forecast (8pm) | "Target Midtown restocked 3 of the last 5 Tuesdays, usually detected morning" | normal |
-| 📊 Weekly report (Sun 6pm) | Store restock patterns, resale vs MSRP, your portfolio value | low |
+| 📊 Weekly report (Sun 6pm) | Store restock patterns, market value vs retail, your portfolio value | low |
 
 ## Where it looks
 
@@ -31,7 +31,7 @@ tends to restock.
 | **Costco, Sam's Club, Dollar General, Dollar Tree, Family Dollar, Five Below, Ace Hardware** | ✅ website search (experimental) | via Reddit posts naming the store | Their card stock is mostly in-store. Run `doctor` to see which sites can be read from your connection. |
 | **Any other page** | ✅ | – | GameStop, Costco, Sam's, Barnes & Noble… via `pagewatch` text matching. |
 | **Reddit** | community | ✅ local sightings | r/PKMNTCGDeals, r/OnePieceTCG + your town names. |
-| **TCGplayer** | resale prices | – | Adds "resale value" to alerts. Hot items get bumped to urgent. |
+| **Market value** | – | – | What items actually sell for (recent sales, like Collectr shows). Used only so you never get an alert above an item's real value. |
 
 Anything Pokémon or One Piece TCG is caught even if it isn't in `watchlist.yaml`. The watchlist sets
 **priority** and **MSRP**. Listings priced above MSRP × 1.15 are treated as scalpers and ignored.
@@ -78,6 +78,24 @@ python -m restockbot test-alert   # send a test push
 python -m restockbot setup        # re-run the wizard (change ZIP, radius, ...)
 ```
 On Windows, use `.venv\Scripts\python` instead of `python` (or `.venv/bin/python` on Mac/Linux).
+
+## Price rules: retail only, never scalper prices
+
+You only get a buy alert when the price is at retail, or a little above it:
+
+| Retail price | Allowed above retail |
+|---|---|
+| up to $15 (blisters, mini tins) | $3 |
+| up to $35 (bundles, tins, collections) | $5 |
+| up to $75 (ETBs, premium collections) | $10 |
+| up to $150 | $15 |
+| over $150 (booster boxes, UPCs) | 10% |
+
+The price must also be at or below the item's **market value**, meaning what it actually sells for
+(recent sales, the same kind of number Collectr shows). That way you never get an alert for something
+worth less than you'd pay. Marketplace and scalper listings never pass, and neither does anything without
+a known retail price. Costco and Sam's Club bundles are judged per item. Change the allowances under
+`price_rules` in config.yaml, or set `retail_only: true` for retail price or less only.
 
 ## Drop mode: faster when it matters
 
@@ -129,8 +147,8 @@ Restocks of older sets are still caught by the general "any Pokémon/One Piece c
   every nearby store. Target limits automated searching, so this is the surest way to cover a product.
   Target links posted on r/PKMNTCGDeals are added automatically.
 - **`portfolio.yaml`**: list what you own and what you paid; the weekly report tracks its value.
-- `tcgplayer_id` on a watchlist item puts its resale value in alerts. It's the number in the
-  product's tcgplayer.com URL.
+- `tcgplayer_id` on a watchlist item pins which product the market value is read from. It's the
+  number in the product's tcgplayer.com URL.
 
 ## How the in-store detection works (and its limits)
 

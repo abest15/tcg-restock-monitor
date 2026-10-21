@@ -76,27 +76,22 @@ class Engine:
             return "", 0
         basis = price or m.msrp
         if not basis:
-            return f"Market (TCGplayer): {money(market)}", 0
+            return f"Market value: {money(market)}", 0
         ratio = market / basis
         if ratio >= 1.3:
-            return f"🔥 Resale ~{money(market)} on TCGplayer ({ratio:.1f}x what you'd pay)", 1 if ratio >= 1.6 else 0
-        return f"Market (TCGplayer): {money(market)}", 0
+            return f"Market value {money(market)} ({ratio:.1f}x what you'd pay)", 1 if ratio >= 1.6 else 0
+        return f"Market value: {money(market)}", 0
 
     def _deal(self, l: Listing, m: Match, price_ok: bool) -> tuple[bool, str]:
-        """Should a price alert go out? With the TCGplayer deal filter on, only when the store price
-        beats TCGplayer; otherwise the MSRP filter decides. Cached per listing per check."""
+        """Should a price alert go out? The price rules (retail + a small allowance, and not above
+        market value) decide; cached per listing and price."""
         gate = getattr(self, "gate", None)
         if not gate or not gate.enabled:
             return price_ok, ""
         k = (l.key, l.price)
         cache = self.__dict__.setdefault("_deal_cache", {})
         if k not in cache:
-            ok, line = gate.check(l.title, l.price, m)
-            tag = self._retail_tag(l, m)
-            if ok and tag:
-                line = f"{tag}\n{line}"
-            if ok and gate.require_retail and self._retail_adj(l, m) < 1:
-                ok, line = False, "above retail (retail-only mode)"
+            ok, line = gate.check(l.title, l.price, m, trusted=l.trusted_price)
             if not ok:
                 log.info("no alert for %s at %s: %s (store %s)", l.title[:60], l.retailer, line, money(l.price))
             cache[k] = (ok, line)
@@ -112,14 +107,6 @@ class Engine:
         if l.trusted_price and l.price > m.msrp * 1.15:
             return 0  # warehouse-club bundles: several items, can't compare with one item's MSRP
         return 1 if l.price <= m.msrp * 1.02 else (-1 if l.price > m.msrp * 1.15 else 0)
-
-    def _retail_tag(self, l: Listing, m: Match) -> str:
-        adj = self._retail_adj(l, m)
-        if adj > 0:
-            return f"✅ RETAIL PRICE (MSRP {money(m.msrp)})"
-        if adj < 0:
-            return f"⚠️ Above retail (MSRP {money(m.msrp)}), but still below TCGplayer"
-        return ""
 
     def _price_line(self, l: Listing, m: Match) -> str:
         parts = [f"Price {money(l.price)}"]

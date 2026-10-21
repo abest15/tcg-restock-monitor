@@ -2,6 +2,11 @@
 
 Newest first. The top section is sent to your phone when the bot updates itself.
 
+## 2.2.0
+- New price rules: alerts only at retail price or a little above (up to $3 over on small items, $5 on bundles and tins, $10 on ETBs, $15 up to $150, 10% on boxes and UPCs), and never above what the item actually sells for
+- Removed the old "below TCGplayer" rule, which let reseller-priced listings through
+- Costco and Sam's Club bundles are judged per item
+
 ## 2.1.3
 - Morning brief's "buyable now" list shows only items at or near retail price, never scalper listings
 

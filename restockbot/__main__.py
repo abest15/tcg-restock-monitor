@@ -167,11 +167,11 @@ def cmd_doctor() -> None:
             for title, game in (("Pokemon TCG Mega Evolution Delta Reign Elite Trainer Box", "pokemon"),
                                 ("One Piece Card Game The Dominance of God Booster Box OP-18", "onepiece")):
                 mk = gate.lookup.find(title, game)
-                print(f"[on ] Deal filter      {game}: " + (f"OK, matched '{mk.name[:45]}' market {money(mk.market)}, "
-                      f"lowest {money(mk.lowest)}" if mk else "no TCGplayer match/price (alerts for it are skipped)")
+                print(f"[on ] Market value     {game}: " + (f"OK, '{mk.name[:45]}' sells for about {money(mk.market)}"
+                      if mk else "not found (alerts still use the retail-price rule)")
                       + f"  ({time.time() - t0:.1f}s)")
         except Exception as e:  # noqa: BLE001
-            print(f"[on ] Deal filter      FAILED: {str(e)[:120]}")
+            print(f"[on ] Market value     FAILED: {str(e)[:120]} (alerts still use the retail-price rule)")
     print("\nFAILED/blocked sources keep retrying with backoff while running. Retailers sometimes block")
     print("home connections for a while. Target, Best Buy (API) and Shopify shops are the most reliable.")
 

@@ -233,7 +233,7 @@ def scheduled(engine: "Engine", now: datetime) -> None:
             parts.append("Sources needing attention:\n" + "\n".join(bad))
         mk = watch_market_lines(engine)
         if mk:
-            parts.append("Resale vs MSRP (TCGplayer):\n" + "\n".join(mk))
+            parts.append("Market value vs retail:\n" + "\n".join(mk))
         pf = portfolio_summary(db)
         if pf:
             parts.append(pf)

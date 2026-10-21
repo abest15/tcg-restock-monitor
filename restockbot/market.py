@@ -141,38 +141,71 @@ class MarketLookup:
         return m
 
 
+PACK_COUNT = re.compile(r"(?:\b(\d{1,2})\s*(?:-|\s)?(?:pack|pk|ct|count)\b|\b(?:set|bundle|lot) of (\d{1,2})\b|\bx\s?(\d{1,2})\b)", re.I)
+SINGLE_ITEM_PACKS = ("blister", "booster pack", "sleeved", "pack of cards")
+
+
+def bundle_count(title: str) -> int:
+    """How many retail items a warehouse-club bundle holds (e.g. 'Elite Trainer Box 3-Pack' -> 3)."""
+    n = norm(title)
+    if any(f" {w} " in n for w in SINGLE_ITEM_PACKS):
+        return 1  # "3-Pack Blister" is one retail item with three packs inside
+    m = PACK_COUNT.search(title)
+    if not m:
+        return 1
+    count = int(next(g for g in m.groups() if g))
+    return count if 2 <= count <= 12 else 1
+
+
 class PriceGate:
-    """Decides whether a listing's price is a deal vs TCGplayer."""
+    """Decides whether a price is worth an alert. The rule is retail price: at or a little above MSRP
+    (a few dollars on small items, a bit more on big ones), and never above what the item is actually
+    worth (market value, i.e. what it really sells for). Never resale asking prices."""
+
+    DEFAULT_TOLERANCE = [[15, 3], [35, 5], [75, 10], [150, 15]]  # [retail up to $X, allowed $ over retail]
 
     def __init__(self, cfg: dict, lookup: Optional[MarketLookup]):
-        g = cfg["alerts"].get("deal_filter", {}) or {}
-        self.enabled = g.get("enabled", True) and lookup is not None
-        self.compare = g.get("compare", "both")          # both | market | lowest
-        self.unknown = g.get("when_no_tcgplayer_price", "skip")  # skip | alert
+        g = cfg["alerts"].get("price_rules", {}) or {}
+        self.enabled = g.get("enabled", True)
+        self.tolerance = sorted(g.get("tolerance") or self.DEFAULT_TOLERANCE)
+        self.big_pct = float(g.get("over_150_percent", 10))
+        self.check_market = g.get("check_market_value", True) and lookup is not None
         self.require_retail = bool(g.get("retail_only", False))
         self.lookup = lookup
 
-    def check(self, title: str, price: Optional[float], m: Match) -> tuple[bool, str]:
+    def allowed_over(self, msrp: float) -> float:
+        for limit, extra in self.tolerance:
+            if msrp <= limit:
+                return float(extra)
+        return round(msrp * self.big_pct / 100, 2)
+
+    def check(self, title: str, price: Optional[float], m: Match, trusted: bool = False) -> tuple[bool, str]:
         """(alert?, line for the message)"""
         if not self.enabled:
             return True, ""
         if price is None:
-            return self.unknown == "alert", "Store price not shown, so it can't be compared with TCGplayer"
-        mk = self.lookup.find(title, m.game, m.tcgplayer_id)
-        if not mk and getattr(self.lookup, "failures", 0) >= 3:
-            # TCGplayer itself is unreachable; going silent would hide every restock, so fall back to MSRP
-            ok = m.msrp is None or price <= m.msrp * 1.15
-            return ok, "⚠️ TCGplayer unavailable right now, so this was checked against MSRP instead"
-        if not mk or not mk.ceiling:
-            return self.unknown == "alert", "⚠️ No TCGplayer price found to compare"
-        bar = {"market": mk.market, "lowest": mk.lowest}.get(self.compare) or mk.ceiling
-        saving = bar - price
-        parts = []
-        if mk.market:
-            parts.append(f"market ${mk.market:,.2f}")
-        if mk.lowest:
-            parts.append(f"lowest listing ${mk.lowest:,.2f}")
-        line = f"TCGplayer (no shipping): {', '.join(parts)}"
-        if saving > 0:
-            return True, f"💰 ${saving:,.2f} below TCGplayer ({line})"
-        return False, line
+            return False, "no price shown"
+        if not m.msrp:
+            return False, "retail price unknown for this product, so it can't be checked"
+        count = bundle_count(title) if trusted else 1
+        each = price / count
+        cap = m.msrp + self.allowed_over(m.msrp)
+        each_txt = f"${each:,.2f} each ({count}-pack)" if count > 1 else f"${each:,.2f}"
+        if each > cap:
+            return False, f"{each_txt} is above retail ${m.msrp:,.2f} + ${cap - m.msrp:,.2f} allowance"
+        if self.require_retail and each > m.msrp * 1.02:
+            return False, "above retail (retail-only mode)"
+        market_txt = ""
+        if self.check_market:
+            mk = self.lookup.find(title, m.game, m.tcgplayer_id) if count == 1 else None
+            if mk and mk.market:
+                if each > mk.market:
+                    return False, f"{each_txt} is above its market value ${mk.market:,.2f}"
+                market_txt = f" · market value ${mk.market:,.2f}"
+        if each <= m.msrp * 1.02:
+            head = f"✅ RETAIL PRICE {each_txt} (MSRP ${m.msrp:,.2f})"
+        elif each < m.msrp:
+            head = f"✅ BELOW RETAIL {each_txt} (MSRP ${m.msrp:,.2f})"
+        else:
+            head = f"${each - m.msrp:,.2f} over retail ${m.msrp:,.2f} (within your limit)"
+        return True, head + market_txt

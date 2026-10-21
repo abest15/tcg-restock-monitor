@@ -19,7 +19,9 @@ DEFAULTS: dict[str, Any] = {
     "alerts": {
         "cooldown_minutes": 20,
         "max_price_multiplier": 1.15,      # ignore listings priced above MSRP x this (scalpers)
-        "deal_filter": {"enabled": True, "compare": "both", "when_no_tcgplayer_price": "skip", "retail_only": False},
+        # alert only at retail (+ a small allowance by item size) and never above market value
+        "price_rules": {"enabled": True, "tolerance": [[15, 3], [35, 5], [75, 10], [150, 15]],
+                        "over_150_percent": 10, "check_market_value": True, "retail_only": False},
         "below_msrp_alerts": True,
         "new_listing_alerts": True,
         "store_quantity_jump": 3,

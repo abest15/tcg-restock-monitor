@@ -14,12 +14,16 @@ ntfy:
 
 alerts:
   cooldown_minutes: 20              # don't repeat the same alert within this window
-  max_price_multiplier: 1.15        # used only when deal_filter is off
-  deal_filter:                      # only alert when the store price beats TCGplayer (no shipping)
+  price_rules:                      # alerts only at retail price, never scalper/reseller prices
     enabled: true
-    compare: both                   # both = below market AND lowest listing | market | lowest
-    when_no_tcgplayer_price: skip   # skip = no alert if TCGplayer has no price | alert
-    retail_only: false              # true = also require at/below MSRP (retail-price alerts only)
+    tolerance:                      # [retail up to $X, allowed $ over retail]
+      - [15, 3]                     #   small items (blisters, mini tins): up to $3 over
+      - [35, 5]                     #   bundles, tins, collections: up to $5 over
+      - [75, 10]                    #   ETBs, premium collections: up to $10 over
+      - [150, 15]
+    over_150_percent: 10            # bigger items (booster boxes, UPCs): up to 10% over retail
+    check_market_value: true        # also never above what it actually sells for (market value)
+    retail_only: false              # true = no allowance at all, retail price or less only
   below_msrp_alerts: true           # alert when something is listed under MSRP
   new_listing_alerts: true          # alert when a new product page appears (an upcoming drop)
   store_quantity_jump: 3            # a store's qty rising by this much counts as a restock
