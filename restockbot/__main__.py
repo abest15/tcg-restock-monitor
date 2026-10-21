@@ -9,7 +9,7 @@
   patterns     show learned in-store restock patterns per store
   calendar     show upcoming releases from the watchlist
   status       show what is buyable right now and recent restocks
-  keys         add free Best Buy / Kroger (King Soopers) API keys for more in-store stock
+  keys         add free Best Buy / Kroger (King Soopers) / eBay API keys
   update       install the latest version now (the bot also does this by itself)
 """
 from __future__ import annotations
@@ -66,7 +66,13 @@ def build(dry_run: bool = False, only: list[str] | None = None):
     engine.updater = Updater(cfg, http, db, engine.n)
     engine.updater.remember_watchlist()
     from .market import MarketLookup, PriceGate
-    engine.gate = PriceGate(cfg, MarketLookup(http, db) if cfg["sources"]["tcgplayer"].get("enabled", True) else None)
+    ebay_cfg = cfg["sources"].get("ebay", {}) or {}
+    ebay = None
+    if ebay_cfg.get("client_id") and ebay_cfg.get("client_secret"):
+        from .ebay import EbayLookup
+        ebay = EbayLookup(http, db, ebay_cfg["client_id"], ebay_cfg["client_secret"])
+    engine.gate = PriceGate(cfg, MarketLookup(http, db) if cfg["sources"]["tcgplayer"].get("enabled", True) else None,
+                            ebay=ebay)
     return cfg, wl, db, engine
 
 
@@ -129,6 +135,12 @@ def cmd_keys() -> None:
     print("  environment: Production, scope: product.compact; copy the Client ID and Client Secret)")
     kid = ask("Kroger Client ID", src.get("kroger", {}).get("client_id", ""))
     ksec = ask("Kroger Client Secret", src.get("kroger", {}).get("client_secret", ""))
+    print("\neBay (asking-price check): https://developer.ebay.com  (join the Developers Program, then")
+    print("  Application Keysets > create a Production keyset; copy the App ID (Client ID) and Cert ID (Client Secret))")
+    eid = ask("eBay App ID / Client ID", src.get("ebay", {}).get("client_id", ""))
+    esec = ask("eBay Cert ID / Client Secret", src.get("ebay", {}).get("client_secret", ""))
+    if eid and esec:
+        src["ebay"] = {"client_id": eid, "client_secret": esec}
     if bb:
         src["bestbuy"] = {"enabled": True, "api_key": bb}
     if kid and ksec:
@@ -172,6 +184,15 @@ def cmd_doctor() -> None:
                       + f"  ({time.time() - t0:.1f}s)")
         except Exception as e:  # noqa: BLE001
             print(f"[on ] Market value     FAILED: {str(e)[:120]} (alerts still use the retail-price rule)")
+    if gate and gate.ebay:
+        try:
+            ask_ = gate.ebay.asking("Pokemon TCG Mega Evolution Delta Reign Elite Trainer Box")
+            print("[on ] eBay asking      " + (f"OK, Delta Reign ETB: typical asking {money(ask_.median)} "
+                  f"({ask_.count} listings)" if ask_ else "no matching listings right now"))
+        except Exception as e:  # noqa: BLE001
+            print(f"[on ] eBay asking      FAILED: {str(e)[:120]}")
+    else:
+        print("[off] eBay asking      free keys add an eBay asking-price check: .venv\\Scripts\\python -m restockbot keys")
     print("\nFAILED/blocked sources keep retrying with backoff while running. Retailers sometimes block")
     print("home connections for a while. Target, Best Buy (API) and Shopify shops are the most reliable.")
 

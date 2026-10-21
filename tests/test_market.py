@@ -98,3 +98,26 @@ def test_engine_only_alerts_at_retail(tmp_path):
     bodies = [b for _, b, _ in n.sent]
     assert any("RETAIL PRICE" in b for b in bodies)
     assert not any("$84.99" in b for b in bodies)                  # reseller-priced listing never alerts
+
+
+def test_ebay_listing_filter_and_gate():
+    from restockbot import ebay
+    title = "Pokemon TCG Mega Evolution Delta Reign Elite Trainer Box"
+    data = {"itemSummaries": [
+        {"title": "Pokemon Delta Reign Elite Trainer Box ETB Sealed", "price": {"value": "64.99"}},
+        {"title": "Pokémon TCG Delta Reign Elite Trainer Box NEW", "price": {"value": "59.99"}},
+        {"title": "Delta Reign Elite Trainer Box Pokemon", "price": {"value": "69.00"}},
+        {"title": "Delta Reign Booster Bundle", "price": {"value": "35.00"}},             # other product
+        {"title": "Lot of 3 Delta Reign Elite Trainer Box", "price": {"value": "180.00"}},  # lot
+        {"title": "Japanese Delta Reign Elite Trainer Box", "price": {"value": "40.00"}},   # foreign
+    ]}
+    assert sorted(ebay.parse_items(data, title)) == [59.99, 64.99, 69.0]
+
+    class FakeEbay:
+        def asking(self, t):
+            return ebay.Asking(median=55.0, count=8, low=50.0)
+    g = market.PriceGate(deep_merge(DEFAULTS, {}), None, ebay=FakeEbay())
+    ok, line = g.check(title, 49.99, M)
+    assert ok and "eBay asking ~$55.00" in line
+    ok, line = g.check(title, 57.99, M)                 # within retail allowance but above eBay asking
+    assert not ok and "eBay asking $55.00" in line

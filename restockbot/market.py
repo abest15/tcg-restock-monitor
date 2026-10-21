@@ -164,8 +164,9 @@ class PriceGate:
 
     DEFAULT_TOLERANCE = [[15, 3], [35, 5], [75, 10], [150, 15]]  # [retail up to $X, allowed $ over retail]
 
-    def __init__(self, cfg: dict, lookup: Optional[MarketLookup]):
+    def __init__(self, cfg: dict, lookup: Optional[MarketLookup], ebay=None):
         g = cfg["alerts"].get("price_rules", {}) or {}
+        self.ebay = ebay  # optional EbayLookup: never above the typical eBay asking price
         self.enabled = g.get("enabled", True)
         self.tolerance = sorted(g.get("tolerance") or self.DEFAULT_TOLERANCE)
         self.big_pct = float(g.get("over_150_percent", 10))
@@ -202,6 +203,12 @@ class PriceGate:
                 if each > mk.market:
                     return False, f"{each_txt} is above its market value ${mk.market:,.2f}"
                 market_txt = f" · market value ${mk.market:,.2f}"
+        if self.ebay and count == 1:
+            a = self.ebay.asking(title)
+            if a:
+                if each > a.median:
+                    return False, f"{each_txt} is above typical eBay asking ${a.median:,.2f} ({a.count} listings)"
+                market_txt += f" · eBay asking ~${a.median:,.2f}"
         if each <= m.msrp * 1.02:
             head = f"✅ RETAIL PRICE {each_txt} (MSRP ${m.msrp:,.2f})"
         elif each < m.msrp:

@@ -93,7 +93,11 @@ You only get a buy alert when the price is at retail, or a little above it:
 
 The price must also be at or below the item's **market value**, meaning what it actually sells for
 (recent sales, the same kind of number Collectr shows). That way you never get an alert for something
-worth less than you'd pay. Marketplace and scalper listings never pass, and neither does anything without
+worth less than you'd pay. With free eBay keys (`python -m restockbot keys`), the price must also be at or
+below the typical eBay asking price: the median of current new, sealed Buy It Now listings of the same
+product. Lots, opened, graded and foreign-language listings are excluded. Facebook Marketplace and Craigslist
+can't be checked, because neither allows automated access. eBay doesn't give sold prices to regular
+developers, so recent-sales value comes from the market value check. Marketplace and scalper listings never pass, and neither does anything without
 a known retail price. Costco and Sam's Club bundles are judged per item. Change the allowances under
 `price_rules` in config.yaml, or set `retail_only: true` for retail price or less only.
 

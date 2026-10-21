@@ -2,6 +2,10 @@
 
 Newest first. The top section is sent to your phone when the bot updates itself.
 
+## 2.3.0
+- eBay check (optional, free keys): the price must also be at or below the typical eBay asking price for the same new, sealed product. Lots, opened, graded and foreign-language listings are ignored
+- Run `.venv\Scripts\python -m restockbot keys` to add eBay keys
+
 ## 2.2.0
 - New price rules: alerts only at retail price or a little above (up to $3 over on small items, $5 on bundles and tins, $10 on ETBs, $15 up to $150, 10% on boxes and UPCs), and never above what the item actually sells for
 - Removed the old "below TCGplayer" rule, which let reseller-priced listings through
